@@ -104,36 +104,78 @@
   const me = () => state.players.find((p) => p.id === state.sess?.player_id);
   const auth = () => ({ p_player: state.sess.player_id, p_token: state.sess.token });
 
+  // ───────── 아이콘 ─────────
+  const ICONS = {
+    scale: '<path d="m16 16 3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1Z"/><path d="m2 16 3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1Z"/><path d="M7 21h10"/><path d="M12 3v18"/><path d="M3 7h2c2 0 5-1 7-2 2 1 5 2 7 2h2"/>',
+    gavel: '<path d="m14 13-8.4 8.4a2 2 0 0 1-2.8-2.8L11 10"/><path d="m16 16 6-6"/><path d="m8 8 6-6"/><path d="m9 7 8 8"/><path d="m21 11-8-8"/>',
+    right: '<path d="M5 12h14"/><path d="m12 5 7 7-7 7"/>',
+    file: '<path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="M10 9H8"/><path d="M16 13H8"/><path d="M16 17H8"/>',
+    users: '<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>',
+    send: '<path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/>',
+    shield: '<path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/><path d="m9 12 2 2 4-4"/>',
+    link: '<path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>',
+    image: '<rect width="18" height="18" x="3" y="3" rx="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.09-3.09a2 2 0 0 0-2.82 0L6 21"/>',
+    redo: '<path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/>',
+    plus: '<path d="M5 12h14"/><path d="M12 5v14"/>',
+    alert: '<circle cx="12" cy="12" r="10"/><path d="M12 8v4"/><path d="M12 16h.01"/>',
+    door: '<path d="M13 4h3a2 2 0 0 1 2 2v14"/><path d="M2 20h3"/><path d="M13 20h9"/><path d="M10 12v.01"/><path d="M13 4.56v16.24a.5.5 0 0 1-.62.49L5 19.5V5.12a1 1 0 0 1 .76-.97l6-1.5A1 1 0 0 1 13 3.62Z"/>',
+  };
+  const ic = (n) => `<svg class="i" viewBox="0 0 24 24" aria-hidden="true">${ICONS[n]}</svg>`;
+
   // ───────── 홈: 사건 접수 ─────────
   function renderHome(prefillCode = "") {
     app.innerHTML = `
       <section class="hero">
-        <div class="hero-seal"><img src="assets/logo.png" alt="땅땅땅" /></div>
-        <h1>판사님, 이 사건 좀 봐주세요</h1>
-        <p>억울한 일을 접수하고 친구를 법정에 부르세요. 각자 변론하면 AI 판사가 판결과 형량을 선고합니다.</p>
+        <div class="eyebrow"><span class="ln"></span>Small disputes, seriously fun</div>
+        <h1>억울한 사건,<br><em>땅땅땅 판결.</em></h1>
+        <p class="hero-copy">친구 사이의 애매한 사건을 접수하고 링크로 친구를 법정에 부르세요. 각자 변론하면 AI 판사가 판결과 형량을 선고합니다.</p>
+        <div class="hero-actions">
+          <a class="btn btn-primary" href="#create">사건 접수하기 ${ic("right")}</a>
+          <a class="btn btn-secondary" href="#join">사건번호로 입장</a>
+        </div>
+        <div class="hero-note">${ic("shield")} 친구끼리 웃고 끝내는 가상 재판</div>
+        <div class="seal-deco" aria-hidden="true"><img src="assets/logo.png" alt="" /></div>
       </section>
 
-      <form class="doc" id="create">
-        <div class="doc-title">소장</div>
-        <label for="title">사건명</label>
-        <input id="title" maxlength="60" required placeholder="치킨 마지막 조각 무단 섭취 사건" />
-        <label for="nick1">접수인 이름</label>
-        <input id="nick1" maxlength="12" required placeholder="법정에서 불릴 닉네임" />
-        <button class="btn brass" type="submit">사건 접수</button>
-      </form>
-
-      <p class="or">법정 소환장을 받았다면</p>
-      <form class="bench" id="join">
-        <h3>사건번호로 입장</h3>
-        <div class="doc" style="margin:0;padding:6px 16px 18px;box-shadow:none">
-          <label for="code">사건번호 6자리</label>
-          <input id="code" class="code-input" maxlength="6" required placeholder="XOXPO1" value="${esc(prefillCode)}" />
-          <label for="nick2">이름</label>
-          <input id="nick2" maxlength="12" required placeholder="법정에서 불릴 닉네임" />
+      <section class="section">
+        <div class="sec-head"><div><span class="eyebrow">How it works</span><h2>재판은 이렇게 진행됩니다</h2></div></div>
+        <div class="steps">
+          <div class="step"><small>접수</small>${ic("file")}<h3>사건 접수</h3><p>사건명을 적고 법정을 열어요.</p></div>
+          <div class="step"><small>소환</small>${ic("link")}<h3>링크 공유</h3><p>소환장 링크를 친구에게 보내요.</p></div>
+          <div class="step"><small>변론</small>${ic("users")}<h3>각자 변론</h3><p>원고, 피고, 증인이 입장을 써요.</p></div>
+          <div class="step"><small>선고</small>${ic("gavel")}<h3>판결 선고</h3><p>AI 판사가 판결과 형량을 내려요.</p></div>
         </div>
-        <button class="btn" type="submit">법정 입장</button>
-      </form>
-      ${adSlot("home")}`;
+      </section>
+
+      <section class="section" style="padding-top:28px">
+        <form class="case-form" id="create">
+          <div class="form-head"><span class="eyebrow">New case</span><h2>사건을 접수합니다</h2></div>
+          <div class="fs">
+            <label class="fl" for="title">사건명 <span>필수</span></label>
+            <input type="text" id="title" maxlength="60" required placeholder="예: 마지막 치킨 한 조각 사건" />
+          </div>
+          <div class="fs">
+            <label class="fl" for="nick1">내 이름 <span>법정에서 불릴 닉네임</span></label>
+            <input type="text" id="nick1" maxlength="12" required placeholder="최대 12자" />
+          </div>
+          <div class="privacy">${ic("shield")}<p>실명, 전화번호, 학교 정보 같은 개인정보는 쓰지 마세요. 서로 웃고 넘길 수 있는 가벼운 사건만 접수해 주세요.</p></div>
+          <button class="btn btn-primary full" type="submit">사건 접수하고 법정 열기 ${ic("right")}</button>
+        </form>
+
+        <form class="case-form" id="join">
+          <div class="form-head"><span class="eyebrow">Summoned</span><h2>소환장을 받았나요?</h2></div>
+          <div class="fs">
+            <label class="fl" for="code">사건번호 <span>6자리</span></label>
+            <input type="text" id="code" class="code-input" maxlength="6" required placeholder="ABC123" value="${esc(prefillCode)}" />
+          </div>
+          <div class="fs">
+            <label class="fl" for="nick2">내 이름 <span>법정에서 불릴 닉네임</span></label>
+            <input type="text" id="nick2" maxlength="12" required placeholder="최대 12자" />
+          </div>
+          <button class="btn btn-secondary full" type="submit">법정 입장 ${ic("door")}</button>
+        </form>
+        ${adSlot("home")}
+      </section>`;
 
     document.getElementById("create").onsubmit = async (e) => {
       e.preventDefault();
@@ -160,33 +202,39 @@
     if (!room) { toast(ERRORS.room_not_found); return renderHome(); }
     if (room.status !== "lobby") {
       app.innerHTML = `
-        <section class="bench">
-          <h2>이미 개정된 법정입니다</h2>
-          <p class="soft">「${esc(room.title)}」 재판은 입장이 마감됐어요.</p>
-          <a class="btn" href="${verdictUrl(code)}">판결문 보기</a>
-          <a class="btn brass" href="./">새 사건 접수</a>
+        <section class="narrow">
+          <div class="pending">
+            <div class="pending-ic">${ic("scale")}</div>
+            <span class="eyebrow">Court in session</span>
+            <h2>이미 개정된 법정입니다</h2>
+            <p>「${esc(room.title)}」 재판은 입장이 마감됐어요.</p>
+            <div class="hero-actions" style="justify-content:center">
+              <a class="btn btn-secondary" href="${verdictUrl(code)}">판결문 보기</a>
+              <a class="btn btn-primary" href="./">새 사건 접수</a>
+            </div>
+          </div>
         </section>`;
       return;
     }
     app.innerHTML = `
-      <form class="doc" id="join">
-        <div class="doc-title">소환장</div>
-        <table class="parties">
-          <tr><th>사건</th><td>${esc(caseNo(code))}</td></tr>
-          <tr><th>사건명</th><td>${esc(room.title)}</td></tr>
-        </table>
-        <p>위 사건에 관하여 귀하를 법정에 소환합니다. 이름을 적고 출석하세요.</p>
-        <label for="nick">이름</label>
-        <input id="nick" maxlength="12" required placeholder="법정에서 불릴 닉네임" />
-        <button class="btn brass" type="submit">출석하기</button>
-      </form>
-      ${adSlot("join")}`;
+      <section class="narrow">
+        <div class="dh"><span class="eyebrow">Summons / ${esc(caseNo(code))}</span><span class="pill">출석 대기</span></div>
+        <h1 class="page-title">${esc(room.title)}</h1>
+        <p class="sub">친구가 당신을 이 사건의 법정에 소환했어요. 이름을 적고 출석하세요.</p>
+        <form class="case-form" id="join">
+          <div class="fs">
+            <label class="fl" for="nick">내 이름 <span>법정에서 불릴 닉네임</span></label>
+            <input type="text" id="nick" maxlength="12" required placeholder="최대 12자" />
+          </div>
+          <button class="btn btn-primary full" type="submit">출석하기 ${ic("right")}</button>
+        </form>
+        ${adSlot("join")}
+      </section>`;
     document.getElementById("join").onsubmit = (e) => {
       e.preventDefault();
       joinRoom(code, document.getElementById("nick").value);
     };
   }
-
   async function joinRoom(code, nickname) {
     if (state.busy) return;
     state.busy = true;
@@ -304,12 +352,22 @@
     if (box) box.innerHTML = submitList();
   }
 
-  function peopleList(badge) {
+  function peopleList(badge, sub = (p) => p.role ?? "자리 고르는 중") {
     return `<ul class="people">${state.players.map((p) => `
       <li>
-        <span><span class="name">${esc(p.nickname)}</span>${p.is_host ? '<span class="host">방장</span>' : ""}${p.id === state.sess.player_id ? '<span class="me">나</span>' : ""}</span>
+        <span class="row-ic">${esc(p.nickname.slice(0, 1))}</span>
+        <span class="row-main">
+          <strong>${esc(p.nickname)}${p.id === state.sess.player_id ? " (나)" : ""}</strong>
+          <span>${esc(sub(p))}${p.is_host ? " · 방장" : ""}</span>
+        </span>
         ${badge(p)}
       </li>`).join("")}</ul>`;
+  }
+
+  function caseHead(r, pill, pillClass = "") {
+    return `
+      <div class="dh"><span class="eyebrow">Case file / ${esc(caseNo(r.code))}</span><span class="pill ${pillClass}">${pill}</span></div>
+      <h1 class="page-title">${esc(r.title)}</h1>`;
   }
 
   // ───────── 대기실 ─────────
@@ -324,34 +382,36 @@
     const extraOpen = state.players.length >= 3;
 
     app.innerHTML = `
-      <section class="bench" style="text-align:center">
-        <div class="case-no">${esc(caseNo(r.code))}</div>
-        <h2 style="color:var(--paper)">${esc(r.title)}</h2>
-        <div class="code-plate">${esc(r.code)}</div>
-        <p class="soft" style="margin-top:12px">사건번호를 보내 친구를 법정에 소환하세요. 2~6명까지 출석할 수 있어요.</p>
-        <button class="btn" id="invite">소환장 보내기</button>
-      </section>
-
-      <section class="bench">
-        <h3>내 자리</h3>
-        <div class="roles">
-          ${PARTY_ROLES.map((role) => `
-            <button class="role-btn ${m?.role === role ? "sel" : ""}" data-role="${role}" ${taken(role) ? "disabled" : ""}>${role}</button>`).join("")}
-          ${EXTRA_ROLES.map((role) => `
-            <button class="role-btn ${m?.role === role ? "sel" : ""}" data-role="${role}" ${extraOpen ? "" : "disabled"}>${role}</button>`).join("")}
+      <section class="narrow">
+        ${caseHead(r, "출석 중")}
+        <p class="sub">소환장 링크를 친구에게 보내세요. 2~6명까지 출석할 수 있어요.</p>
+        <div class="code-box">
+          <div><span class="label">사건번호</span><strong>${esc(r.code)}</strong></div>
+          <button class="btn btn-primary" id="invite">${ic("send")} 소환장 보내기</button>
         </div>
-        <p class="soft" style="margin:10px 0 0">원고와 피고는 한 명씩만. ${extraOpen ? "증인, 배심원, 검사, 변호인은 여러 명이 맡을 수 있어요." : "3명부터 증인, 배심원, 검사, 변호인 자리가 열려요."}</p>
-      </section>
 
-      <section class="bench">
-        <h3>출석 ${state.players.length}/6</h3>
-        ${peopleList((p) => `<span class="badge ${p.role ? "on" : ""}">${esc(p.role ?? "자리 고르는 중")}</span>`)}
-        ${m?.is_host
-          ? `<button class="btn brass" id="start" ${ready ? "" : "disabled"}>개정 선언</button>
-             ${ready ? "" : '<p class="soft" style="margin:10px 0 0">원고와 피고가 정해지고 모두 자리를 고르면 개정할 수 있어요.</p>'}`
-          : `<p class="soft" style="margin:12px 0 0">방장이 개정을 선언하길 기다리는 중<span class="dots"></span></p>`}
-      </section>
-      ${adSlot("lobby")}`;
+        <div class="case-form">
+          <div class="fs">
+            <div class="fl">내 자리 <span>원고·피고는 한 명씩</span></div>
+            <div class="choices">
+              ${PARTY_ROLES.map((role) => `
+                <button type="button" class="choice ${m?.role === role ? "sel" : ""}" data-role="${role}" ${taken(role) ? "disabled" : ""}>${role}</button>`).join("")}
+              ${EXTRA_ROLES.map((role) => `
+                <button type="button" class="choice ${m?.role === role ? "sel" : ""}" data-role="${role}" ${extraOpen ? "" : "disabled"}>${role}</button>`).join("")}
+            </div>
+            <p class="cc" style="text-align:left">${extraOpen ? "증인, 배심원, 검사, 변호인은 여러 명이 맡을 수 있어요." : "3명부터 증인, 배심원, 검사, 변호인 자리가 열려요."}</p>
+          </div>
+
+          <div class="fl">출석 ${state.players.length}/6</div>
+          ${peopleList((p) => `<span class="pill ${p.role ? "done" : ""}">${p.role ? "착석" : "대기"}</span>`)}
+
+          ${m?.is_host
+            ? `<button class="btn btn-primary full" id="start" style="margin-top:20px" ${ready ? "" : "disabled"}>${ic("gavel")} 개정 선언</button>
+               ${ready ? "" : '<p class="cc" style="text-align:center">원고와 피고가 정해지고 모두 자리를 고르면 개정할 수 있어요.</p>'}`
+            : `<p class="sub" style="margin-top:18px;text-align:center">방장이 개정을 선언하길 기다리는 중 <span class="spin"></span></p>`}
+        </div>
+        ${adSlot("lobby")}
+      </section>`;
 
     document.getElementById("invite").onclick = () => copyOrShare(inviteUrl(r.code), `땅땅땅 소환장: ${r.title}`);
     app.querySelectorAll("[data-role]").forEach((b) => {
@@ -370,36 +430,42 @@
   // ───────── 변론 ─────────
   function submitList() {
     const done = state.players.filter((p) => p.submitted).length;
-    return `<h3>변론 제출 ${done}/${state.players.length}</h3>` +
-      peopleList((p) => `<span class="badge ${p.submitted ? "done" : ""}">${p.submitted ? "제출함" : "작성 중"}</span>`);
+    return `<div class="fl">변론 제출 ${done}/${state.players.length}</div>` +
+      peopleList((p) => `<span class="pill ${p.submitted ? "done" : ""}">${p.submitted ? "제출함" : "작성 중"}</span>`);
   }
 
   function renderArguing() {
     const r = state.room, m = me();
     if (m?.submitted) {
       app.innerHTML = `
-        <section class="bench" style="text-align:center">
-          <h2 style="color:var(--paper)">변론서가 접수됐습니다</h2>
-          <p class="soft" style="margin:0">모두 제출하면 판사가 입장합니다. 다른 사람의 변론은 판결문에서 공개돼요.</p>
-        </section>
-        <section class="bench" id="submit-status">${submitList()}</section>
-        ${adSlot("waiting")}`;
+        <section class="narrow">
+          ${caseHead(r, "변론 중")}
+          <div class="pending">
+            <div class="pending-ic">${ic("file")}</div>
+            <span class="eyebrow">Brief filed</span>
+            <h2>변론서가 접수됐습니다</h2>
+            <p>모두 제출하면 판사가 입장합니다. 다른 사람의 변론은 판결문에서 공개돼요.</p>
+          </div>
+          <div class="case-form" id="submit-status">${submitList()}</div>
+          ${adSlot("waiting")}
+        </section>`;
       return;
     }
     // 변론 작성 화면에는 광고를 넣지 않음 (오터치 방지)
     app.innerHTML = `
-      <section class="doc">
-        <div class="doc-title">변론서</div>
-        <table class="parties">
-          <tr><th>사건</th><td>${esc(caseNo(r.code))} ${esc(r.title)}</td></tr>
-          <tr><th>${esc(m?.role)}</th><td>${esc(m?.nickname)}</td></tr>
-        </table>
-        <label for="arg">존경하는 재판장님,</label>
-        <textarea id="arg" maxlength="${MAX_ARG}" placeholder="${esc(m?.role)}의 입장에서 판사님을 설득하세요. 다른 사람의 변론은 판결 전까지 보이지 않아요.">${esc(state.draft)}</textarea>
-        <div class="counter"><span id="cnt">${state.draft.length}</span>/${MAX_ARG}자</div>
-        <button class="btn brass" id="submit">변론서 제출</button>
-      </section>
-      <section class="bench" id="submit-status">${submitList()}</section>`;
+      <section class="narrow">
+        ${caseHead(r, "변론 중")}
+        <p class="sub">${esc(m?.role)} 입장에서 판사님을 설득하세요. 다른 사람의 변론은 판결 전까지 보이지 않아요.</p>
+        <div class="case-form">
+          <div class="fs">
+            <label class="fl" for="arg">${esc(m?.role)} ${esc(m?.nickname)}의 변론 <span>필수</span></label>
+            <textarea id="arg" maxlength="${MAX_ARG}" placeholder="존경하는 재판장님, 저는 억울합니다.">${esc(state.draft)}</textarea>
+            <div class="cc"><span id="cnt">${state.draft.length}</span>/${MAX_ARG}</div>
+          </div>
+          <button class="btn btn-primary full" id="submit">변론서 제출 ${ic("right")}</button>
+        </div>
+        <div class="case-form" id="submit-status">${submitList()}</div>
+      </section>`;
 
     const ta = document.getElementById("arg");
     ta.oninput = () => {
@@ -420,65 +486,72 @@
   }
 
   // ───────── 휴정 ─────────
-  const GAVEL = `
-    <svg class="gavel-svg" viewBox="0 0 140 120" aria-hidden="true">
-      <rect x="28" y="97" width="84" height="12" rx="3" fill="#5a3824"/>
-      <rect x="38" y="88" width="64" height="10" rx="3" fill="#c9a24a"/>
-      <g class="gavel-head">
-        <rect x="56" y="56" width="70" height="8" rx="4" fill="#6b4329"/>
-        <rect x="30" y="34" width="30" height="52" rx="7" fill="#7a4b2e"/>
-        <rect x="27" y="39" width="36" height="6" rx="2" fill="#c9a24a"/>
-        <rect x="27" y="75" width="36" height="6" rx="2" fill="#c9a24a"/>
-      </g>
-    </svg>`;
-
   function renderRecess() {
     recessAd(state.room.round);
-    const retrial = state.room.round > 1;
+    const r = state.room;
+    const retrial = r.round > 1;
     app.innerHTML = `
-      <section class="bench recess">
-        ${GAVEL}
-        <h2>${retrial ? `제${state.room.round - 1}차 재심, 휴정` : "휴정"}</h2>
-        <p class="soft" style="margin:0">${retrial ? "새 판사가 사건 기록을 처음부터 다시 읽고 있습니다" : "판사가 모든 변론서를 검토하고 있습니다"}<span class="dots"></span></p>
-        ${state.judgeFails >= 3 ? `<button class="btn brass" id="retry">선고 다시 요청</button>` : ""}
-      </section>
-      ${adSlot("recess")}`;
+      <section class="narrow">
+        ${caseHead(r, retrial ? `제${r.round - 1}차 재심` : "휴정")}
+        <div class="pending">
+          <div class="pending-ic"><span class="gavel-tap" style="display:inline-flex">${ic("gavel")}</span></div>
+          <span class="eyebrow">Court in recess</span>
+          <h2>${retrial ? "새 판사가 사건을 다시 심리합니다" : "판사가 변론을 검토하고 있습니다"}</h2>
+          <p>모든 변론서가 접수됐어요. 곧 판결이 선고됩니다. 보통 10초에서 30초 걸려요.</p>
+          ${state.judgeFails >= 3
+            ? `<button class="btn btn-primary" id="retry">${ic("redo")} 선고 다시 요청</button>`
+            : `<p style="margin-top:16px"><span class="spin"></span></p>`}
+        </div>
+        ${adSlot("recess")}
+      </section>`;
     const retry = document.getElementById("retry");
     if (retry) retry.onclick = () => { state.judgeFails = 0; state.lastKey = ""; callJudge(); };
   }
 
   function renderQueued() {
+    const r = state.room;
     app.innerHTML = `
-      <section class="bench recess">
-        <h2>오늘 법원 업무가 마감됐습니다</h2>
-        <p class="soft">오늘 선고할 수 있는 사건 수가 모두 찼어요. 변론서는 안전하게 보관돼 있으니 내일 다시 선고를 요청해 주세요.</p>
-        <button class="btn brass" id="retry">선고 다시 요청</button>
-      </section>
-      ${adSlot("queued")}`;
+      <section class="narrow">
+        ${caseHead(r, "선고 대기")}
+        <div class="pending">
+          <div class="pending-ic">${ic("scale")}</div>
+          <span class="eyebrow">Court closed</span>
+          <h2>오늘 법원 업무가 마감됐습니다</h2>
+          <p>오늘 선고할 수 있는 사건 수가 모두 찼어요. 변론서는 안전하게 보관돼 있으니 내일 다시 선고를 요청해 주세요.</p>
+          <button class="btn btn-primary" id="retry">${ic("redo")} 선고 다시 요청</button>
+        </div>
+        ${adSlot("queued")}
+      </section>`;
     document.getElementById("retry").onclick = callJudge;
   }
 
   // ───────── 판결문 ─────────
-  function partiesTable(room, players) {
-    const of = (role) => players.filter((p) => p.role === role).map((p) => esc(p.nickname)).join(", ");
-    const rows = [["사건", `${esc(caseNo(room.code))} ${esc(room.title)}`], ["원고", of("원고") || "-"], ["피고", of("피고") || "-"]];
-    for (const role of EXTRA_ROLES) { const n = of(role); if (n) rows.push([role, n]); }
-    return `<table class="parties">${rows.map(([k, v]) => `<tr><th>${k}</th><td>${v}</td></tr>`).join("")}</table>`;
+  function partiesBlock(players) {
+    const roles = [...PARTY_ROLES, ...EXTRA_ROLES];
+    const cells = roles
+      .map((role) => [role, players.filter((p) => p.role === role).map((p) => esc(p.nickname)).join(", ")])
+      .filter(([role, n]) => n || PARTY_ROLES.includes(role));
+    return `<div class="vparties">${cells.map(([role, n]) => `<div><span class="role">${role}</span><strong>${n || "-"}</strong></div>`).join("")}</div>`;
   }
 
   function verdictCard(room, players, stamping = false) {
     const v = room.verdict ?? {};
+    const d = new Date(v.decided_at ?? "");
+    const date = isNaN(d) ? "" : d.toLocaleDateString("ko-KR");
     return `
-      <article class="doc verdict ${stamping ? "stamping" : ""}" id="verdict-card">
-        <div class="court-name">땅땅땅 지방법원</div>
-        <div class="doc-title">${room.round > 1 ? "재심판결" : "판결"}</div>
-        ${partiesTable(room, players)}
-        <div class="ruling-headline">${esc(v.headline)}<span class="ruling-type">${esc(v.ruling)}</span></div>
-        <div class="sec order"><div class="sec-title">주문</div><p>${esc(v.sentence)}</p></div>
-        <div class="sec"><div class="sec-title">이유</div><p>${esc(v.summary)}</p><p>${esc(v.reasoning)}</p></div>
-        <div class="quote"><small>재판장 한마디</small>${esc(v.judge_quote)}</div>
-        <div class="sign"><span>판사 ${esc(v.judge ?? "AI 판사")}</span><span class="in">(인)</span><div class="seal">땅땅땅<br/>판사</div></div>
-        <div class="disclaimer">재미로 보는 가상 판결이며 법적 효력이 없습니다.</div>
+      <article class="verdict ${stamping ? "stamping" : ""}" id="verdict-card">
+        <div class="vtop">
+          <div><span class="eyebrow">The Friend Court</span><h2>${room.round > 1 ? `제${room.round - 1}차 재심 판결문` : "모의 판결문"}</h2></div>
+          <div class="stamp">판결<br>완료</div>
+        </div>
+        <div class="vmeta"><span>사건번호 ${esc(caseNo(room.code))}</span><span>${esc(v.judge ?? "AI 판사")}${date ? ` · ${date}` : ""}</span></div>
+        ${partiesBlock(players)}
+        <div class="vres"><span>최종 판결</span><h3>${esc(v.headline)}</h3><strong>${esc(v.ruling)}</strong></div>
+        <div class="vblock"><h4>사건 개요</h4><p>${esc(v.summary)}</p></div>
+        <div class="vblock"><h4>판단 이유</h4><p>${esc(v.reasoning)}</p></div>
+        <div class="sentence"><span class="sl">선고 형량</span><p>${esc(v.sentence)}</p></div>
+        <blockquote class="note-q"><span>재판장 한마디</span>${esc(v.judge_quote)}</blockquote>
+        <p class="legal">이 판결은 재미를 위한 가상 판결이며 법적 효력이 없습니다.</p>
       </article>`;
   }
 
@@ -486,10 +559,10 @@
     const hist = (room.verdict_history ?? []).slice(0, -1);
     if (!hist.length) return "";
     return `
-      <details class="bench history">
-        <summary>이전 판결 ${hist.length}건</summary>
+      <details class="history">
+        <summary>이전 판결 ${hist.length}건 보기</summary>
         ${hist.map((h) => `
-          <p style="margin-top:12px"><b style="color:var(--on-wood)">${h.round > 1 ? `제${h.round - 1}차 재심` : "원심"}, ${esc(h.judge)}</b><br/>
+          <p><b>${h.round > 1 ? `제${h.round - 1}차 재심` : "원심"} · ${esc(h.judge)}</b><br/>
           ${esc(h.headline)} (${esc(h.ruling)})</p>`).join("")}
       </details>`;
   }
@@ -498,7 +571,7 @@
   function slam() {
     if (reduceMotion()) return false;
     const el = document.createElement("div");
-    el.className = "slam out";
+    el.className = "slam";
     el.setAttribute("aria-hidden", "true");
     el.innerHTML = `<span class="slam-word w1">땅!</span><span class="slam-word w2">땅!</span><span class="slam-word w3">땅!</span>`;
     document.body.appendChild(el);
@@ -518,16 +591,21 @@
     if (fresh) { state.slammedAt = r.verdict?.decided_at; stamping = slam(); }
 
     app.innerHTML = `
-      ${r.vote_result === "rejected" && !r.vote_open
-        ? `<div class="notice"><b>재심 기각.</b> 전원 동의를 얻지 못해 원심이 확정됐습니다.</div>` : ""}
-      ${verdictCard(r, state.players, stamping)}
-      ${adSlot("verdict")}
-      <button class="btn brass" id="share">판결문 보내기</button>
-      <button class="btn" id="save">판결문 이미지로 저장</button>
-      ${canRetry ? `<button class="btn blood" id="retrial">재심 청구 (전원 동의 필요)</button>` : ""}
-      ${r.round >= MAX_ROUND ? `<p class="soft" style="margin-top:12px;text-align:center">재심은 3번까지예요. 이 판결로 확정됩니다.</p>` : ""}
-      <a class="btn" href="./">새 사건 접수</a>
-      ${historyBlock(r)}
+      <section class="narrow">
+        ${caseHead(r, "판결 완료", "done")}
+        ${r.vote_result === "rejected" && !r.vote_open
+          ? `<div class="notice">${ic("alert")}<span><b>재심 기각.</b> 전원 동의를 얻지 못해 원심이 확정됐습니다.</span></div>` : ""}
+        ${verdictCard(r, state.players, stamping)}
+        <div class="vactions">
+          <button class="btn btn-primary" id="share">${ic("link")} 링크 보내기</button>
+          <button class="btn btn-secondary" id="save">${ic("image")} 이미지로 저장</button>
+          ${canRetry ? `<button class="btn btn-stamp wide" id="retrial">${ic("redo")} 재심 청구 (전원 동의 필요)</button>` : ""}
+        </div>
+        ${r.round >= MAX_ROUND ? `<p class="cc" style="text-align:center">재심은 3번까지예요. 이 판결로 확정됩니다.</p>` : ""}
+        ${adSlot("verdict")}
+        ${historyBlock(r)}
+        <div class="bottom"><a class="text-button" href="./">${ic("plus")} 새 사건 접수</a></div>
+      </section>
       ${r.vote_open ? voteModal() : ""}`;
 
     document.getElementById("share").onclick = () => copyOrShare(verdictUrl(r.code), `땅땅땅 판결: ${r.verdict?.headline ?? r.title}`);
@@ -550,17 +628,18 @@
     const agreed = state.players.filter((p) => p.vote === true).length;
     return `
       <div class="modal-back" role="dialog" aria-modal="true" aria-labelledby="vote-title">
-        <div class="doc modal">
-          <div class="doc-title" id="vote-title">재심청구</div>
-          <p>모두 찬성하면 새 판사가 사건을 다시 판결합니다. 한 명이라도 반대하면 원심이 확정돼요.</p>
-          <h3>찬성 ${agreed}/${state.players.length}</h3>
-          <table class="parties">${state.players.map((p) => `
-            <tr><th style="letter-spacing:0;width:auto">${esc(p.nickname)}</th>
-                <td style="text-align:right;color:${p.vote === true ? "var(--ok)" : p.vote === false ? "var(--oxblood)" : "var(--ink-soft)"}">${p.vote === true ? "찬성" : p.vote === false ? "반대" : "고민 중"}</td></tr>`).join("")}
-          </table>
+        <div class="modal">
+          <span class="eyebrow">Retrial vote</span>
+          <h2 id="vote-title">재심을 열까요?</h2>
+          <p class="sub">모두 찬성하면 새 판사가 사건을 다시 판결합니다. 한 명이라도 반대하면 원심이 확정돼요.</p>
+          <div class="fl" style="margin-top:18px">찬성 ${agreed}/${state.players.length}</div>
+          ${peopleList(
+            (p) => `<span class="pill ${p.vote === true ? "done" : p.vote === false ? "no" : ""}">${p.vote === true ? "찬성" : p.vote === false ? "반대" : "고민 중"}</span>`,
+            (p) => p.role ?? "",
+          )}
           ${m && m.vote === null
-            ? `<div class="row"><button class="btn brass" data-vote="yes">찬성</button><button class="btn" data-vote="no">반대</button></div>`
-            : `<p class="soft" style="margin:0">다른 사람들의 결정을 기다리는 중<span class="dots"></span></p>`}
+            ? `<div class="row2"><button class="btn btn-primary" data-vote="yes">찬성</button><button class="btn btn-secondary" data-vote="no">반대</button></div>`
+            : `<p class="sub" style="margin-top:16px;text-align:center">다른 사람들의 결정을 기다리는 중 <span class="spin"></span></p>`}
         </div>
       </div>`;
   }
@@ -569,7 +648,8 @@
     const card = document.getElementById("verdict-card");
     if (!card || !window.html2canvas) return toast("이 브라우저에서는 이미지 저장이 안 돼요. 화면을 캡처해 주세요.");
     try {
-      const canvas = await window.html2canvas(card, { backgroundColor: "#f2e8cf", scale: 2 });
+      const bg = getComputedStyle(card).backgroundColor || "#fffefa";
+      const canvas = await window.html2canvas(card, { backgroundColor: bg, scale: 2 });
       const a = document.createElement("a");
       a.href = canvas.toDataURL("image/png");
       a.download = `땅땅땅_판결_${state.room?.code ?? ""}.png`;
@@ -584,19 +664,27 @@
     if (!room) { toast(ERRORS.room_not_found); return renderHome(); }
     if (!room.verdict) {
       app.innerHTML = `
-        <section class="bench">
-          <h2>아직 선고 전입니다</h2>
-          <p class="soft">「${esc(room.title)}」 재판이 진행 중이에요.</p>
-          <a class="btn brass" href="./">우리도 사건 접수하기</a>
+        <section class="narrow">
+          ${caseHead(room, "심리 중")}
+          <div class="pending">
+            <div class="pending-ic">${ic("scale")}</div>
+            <span class="eyebrow">Court in session</span>
+            <h2>아직 선고 전입니다</h2>
+            <p>이 재판은 아직 진행 중이에요.</p>
+            <a class="btn btn-primary" href="./">우리도 사건 접수하기 ${ic("right")}</a>
+          </div>
         </section>`;
       return;
     }
     const { data: players } = await sb.from("players").select("nickname,role").eq("room_id", room.id).order("created_at");
     app.innerHTML = `
-      ${verdictCard(room, players ?? [])}
-      ${adSlot("shared")}
-      <a class="btn brass" href="./">우리도 사건 접수하기</a>
-      ${historyBlock(room)}`;
+      <section class="narrow">
+        ${caseHead(room, "판결 완료", "done")}
+        ${verdictCard(room, players ?? [])}
+        ${adSlot("shared")}
+        <div class="vactions"><a class="btn btn-primary wide" href="./">${ic("gavel")} 우리도 사건 접수하기</a></div>
+        ${historyBlock(room)}
+      </section>`;
   }
 
   // ───────── 시작 ─────────
@@ -605,7 +693,7 @@
   const viewCode = (params.get("v") || "").toUpperCase();
 
   if (!SUPABASE_URL || SUPABASE_URL.includes("YOUR-PROJECT")) {
-    app.innerHTML = `<section class="bench"><h2>설정이 필요해요</h2><p class="soft">config.js에 Supabase 주소와 키를 넣어 주세요.</p></section>`;
+    app.innerHTML = `<section class="narrow"><div class="pending"><h2>설정이 필요해요</h2><p>config.js에 Supabase 주소와 키를 넣어 주세요.</p></div></section>`;
   } else if (viewCode) {
     renderShared(viewCode);
   } else if (roomCode) {

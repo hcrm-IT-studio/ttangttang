@@ -7,13 +7,13 @@
   <meta name="description" content="친구끼리 사건을 접수하고 변론하면 AI 판사가 판결과 벌칙을 내려 드립니다." />
   <meta property="og:title" content="땅땅땅! AI 판사의 판결이 도착했습니다" />
   <meta property="og:description" content="억울한 사건, 땅땅땅에 접수하세요." />
-  <meta name="theme-color" content="#24160f" />
+  <meta name="theme-color" content="#f6f4ef" />
   <meta property="og:image" content="assets/og.png" />
   <link rel="icon" type="image/png" href="assets/favicon.png" />
   <link rel="apple-touch-icon" href="assets/apple-touch-icon.png" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Nanum+Myeongjo:wght@400;700;800&family=Noto+Sans+KR:wght@400;500;700&family=Noto+Serif+KR:wght@700;900&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@400;500;600;700&family=Noto+Sans+KR:wght@400;500;600;700&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="styles.css" />
   <!-- 애드센스: 승인 후 아래 주석을 풀고 ca-pub 값을 넣으세요
   <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-XXXXXXXX" crossorigin="anonymous"
@@ -22,22 +22,27 @@
   -->
 </head>
 <body>
-  <header class="topbar">
-    <a href="./" class="brand">
-      <img class="brand-logo" src="assets/favicon.png" alt="" />
-      <span class="brand-name">땅땅땅</span>
-    </a>
-    <span class="brand-court">친구 사건 전담 법정</span>
+  <header class="shell">
+    <div class="topbar">
+      <a href="./" class="brand" aria-label="땅땅땅 처음으로">
+        <span class="brand-mark"><img src="assets/favicon.png" alt="" /></span>
+        <span><strong>땅땅땅</strong><small>THE FRIEND COURT</small></span>
+      </a>
+      <div class="status" id="status"><span class="dot on"></span><span>재판소 개정 중</span></div>
+    </div>
   </header>
 
-  <main id="app" aria-live="polite"></main>
+  <main class="shell" id="app" aria-live="polite"></main>
+
+  <footer class="shell">
+    <div class="footer">
+      <div class="fb"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="m14 13-8.4 8.4a2 2 0 0 1-2.8-2.8L11 10"/><path d="m16 16 6-6"/><path d="m8 8 6-6"/><path d="m9 7 8 8"/><path d="m21 11-8-8"/></svg> 땅땅땅</div>
+      <p>친구끼리 웃고 끝내는 가상 재판</p>
+      <p class="dis">이 판결은 재미를 위한 가상 판결이며 법적 효력이 없습니다. 실명, 전화번호, 학교 정보 같은 개인정보나 민감한 내용은 쓰지 마세요. 입력한 내용은 판결문을 만들 때 AI에 전달됩니다.</p>
+    </div>
+  </footer>
 
   <div id="toast" class="toast" role="status"></div>
-
-  <footer class="foot">
-    이 판결은 재미를 위한 가상 판결이며 법적 효력이 없습니다.<br />
-    실명이나 민감한 개인정보는 쓰지 마세요. 입력 내용은 AI 처리에 사용됩니다.
-  </footer>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
