@@ -99,6 +99,7 @@
     judgeTimer: null, lastKey: "", draft: "",
     busy: false, refreshing: false,
     sawJudging: false, slammedAt: null,
+    judgeFails: 0,
   };
   const me = () => state.players.find((p) => p.id === state.sess?.player_id);
   const auth = () => ({ p_player: state.sess.player_id, p_token: state.sess.token });
@@ -257,7 +258,9 @@
 
   function maybeJudge() {
     if (state.room.status !== "judging" || state.judgeTimer) return;
-    const delay = me()?.is_host ? 0 : 12000;
+    if (state.judgeFails >= 3) return; // 자동 재시도 중단, 휴정 화면의 버튼으로 수동 요청
+    const backoff = state.judgeFails ? 5000 * 2 ** (state.judgeFails - 1) : 0;
+    const delay = (me()?.is_host ? 0 : 12000) + backoff;
     state.judgeTimer = setTimeout(async () => {
       state.judgeTimer = null;
       if (state.room.status !== "judging") return;
@@ -266,14 +269,19 @@
   }
 
   async function callJudge() {
-    try { await sb.functions.invoke("judge", { body: { room_id: state.room.id } }); }
-    catch { /* 결과는 refresh로 확인 */ }
+    let ok = false;
+    try {
+      const { data } = await sb.functions.invoke("judge", { body: { room_id: state.room.id } });
+      ok = !!data?.ok || data?.reason === "not_ready" || data?.reason === "daily_limit";
+    } catch { ok = false; }
+    state.judgeFails = ok ? 0 : state.judgeFails + 1;
+    if (state.judgeFails >= 3) { state.lastKey = ""; toast("판사가 잠시 자리를 비웠어요. 잠시 후 다시 요청해 주세요."); }
     refresh();
   }
 
   function viewKey() {
     const r = state.room, m = me();
-    const base = [r.status, r.round, r.vote_open, r.vote_result, m?.role, m?.submitted, m?.vote];
+    const base = [r.status, r.round, r.vote_open, r.vote_result, m?.role, m?.submitted, m?.vote, state.judgeFails >= 3];
     if (r.status === "lobby") base.push(state.players.map((p) => p.id + p.role).join());
     if (r.status === "done") base.push(state.players.map((p) => p.vote).join(), r.verdict?.decided_at);
     return JSON.stringify(base);
@@ -432,8 +440,11 @@
         ${GAVEL}
         <h2>${retrial ? `제${state.room.round - 1}차 재심, 휴정` : "휴정"}</h2>
         <p class="soft" style="margin:0">${retrial ? "새 판사가 사건 기록을 처음부터 다시 읽고 있습니다" : "판사가 모든 변론서를 검토하고 있습니다"}<span class="dots"></span></p>
+        ${state.judgeFails >= 3 ? `<button class="btn brass" id="retry">선고 다시 요청</button>` : ""}
       </section>
       ${adSlot("recess")}`;
+    const retry = document.getElementById("retry");
+    if (retry) retry.onclick = () => { state.judgeFails = 0; state.lastKey = ""; callJudge(); };
   }
 
   function renderQueued() {

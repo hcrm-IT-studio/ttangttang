@@ -304,3 +304,13 @@ grant execute on function public.cast_vote(uuid, uuid, boolean)          to anon
 
 grant execute on function public.consume_daily(int)   to service_role;
 grant execute on function public.claim_judging(uuid)  to service_role;
+
+-- AI 호출 실패 시 하루 사용량 되돌리기
+create or replace function public.refund_daily() returns void
+language plpgsql security definer set search_path = public as $$
+begin
+  update public.usage_daily set count = greatest(count - 1, 0)
+   where day = (now() at time zone 'Asia/Seoul')::date;
+end $$;
+revoke execute on function public.refund_daily() from public, anon, authenticated;
+grant execute on function public.refund_daily() to service_role;
