@@ -1,0 +1,4 @@
+# 판결 함수는 로그인 없이 호출되므로 JWT 검증을 끈다.
+# 대신 함수 안에서 방 상태(judging)와 하루 상한으로 남용을 막는다.
+[functions.judge]
+verify_jwt = false
