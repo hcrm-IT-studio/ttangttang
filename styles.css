@@ -11,6 +11,7 @@
   --muted: #9aa29c;
   --brass: #c19a4b;
   --seal: #b3302f;
+  --seal-text: #ec6b63; /* 적색 글자 전용(바탕 대비 5.2:1) */
   --khaki: #6f7355;
   --side: #2a3339;
   --display: "Black Han Sans", "Noto Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
@@ -100,7 +101,7 @@ main { flex: 1; }
 .btn-primary:disabled { background: linear-gradient(225deg, transparent 8px, var(--khaki) 8px); color: rgba(230, 223, 204, .7); }
 .btn-secondary { background: transparent; color: var(--bone); box-shadow: inset 0 0 0 1px var(--muted); }
 .btn-secondary:hover { background: rgba(230, 223, 204, .08); }
-.btn-stamp { background: transparent; color: var(--seal); box-shadow: inset 0 0 0 1px var(--seal); }
+.btn-stamp { background: transparent; color: var(--seal-text); box-shadow: inset 0 0 0 1px var(--seal); }
 .btn-stamp:hover { background: rgba(179, 48, 47, .12); }
 .full { width: 100%; }
 .text-button { display: inline-flex; align-items: center; gap: 8px; min-height: 44px; border: 0; background: none; color: var(--bone); font-weight: 700; font-size: 14px; text-decoration: none; }
@@ -275,7 +276,7 @@ textarea { resize: vertical; min-height: 160px; line-height: 32px; padding-top: 
 .slam-word { position: absolute; font-family: var(--display); color: var(--bone); font-size: 72px; line-height: 1; opacity: 0; text-shadow: 0 6px 0 rgba(0, 0, 0, .5); }
 .slam-word.w1 { transform: translate(-16vw, -22vh) rotate(-8deg); animation: hit .3s cubic-bezier(.2, 1.6, .4, 1) 0s forwards; }
 .slam-word.w2 { transform: translate(14vw, -10vh) rotate(5deg); animation: hit .3s cubic-bezier(.2, 1.6, .4, 1) .36s forwards; }
-.slam-word.w3 { transform: translate(0, 6vh); color: var(--seal); font-size: 120px; animation: hit3 .22s ease-out .8s forwards; }
+.slam-word.w3 { transform: translate(0, 6vh); color: var(--seal-text); font-size: 120px; animation: hit3 .22s ease-out .8s forwards; }
 .slam-word.dim { animation: none; opacity: .35; }
 @keyframes hit { 0% { opacity: 0; scale: 2.8; } 60% { opacity: 1; } 100% { opacity: 1; scale: 1; } }
 @keyframes hit3 { 0% { opacity: 0; scale: 1.8; } 70% { opacity: 1; scale: .96; } 100% { opacity: 1; scale: 1; } }
