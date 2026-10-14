@@ -123,22 +123,26 @@
   const ic = (n) => `<svg class="i" viewBox="0 0 24 24" aria-hidden="true">${ICONS[n]}</svg>`;
 
   // ───────── 홈: 사건 접수 ─────────
+  let heroPlayed = false; // 홈 히어로의 쾅쾅쾅 등장은 한 번만
   function renderHome(prefillCode = "") {
+    // 인트로를 끝까지 본 세션(body.intro-done)에서는 같은 쾅쾅쾅을 다시 하지 않는다
+    const heroPlay = !heroPlayed && !reduceMotion() && !document.body.classList.contains("intro-done");
+    heroPlayed = true;
     app.innerHTML = `
-      <section class="hero">
-        <div class="eyebrow"><span class="ln"></span>Small disputes, seriously fun</div>
-        <h1>억울한 사건,<br><em>땅땅땅 판결.</em></h1>
+      <section class="hero ${heroPlay ? "play" : ""}">
+        <div class="spot" aria-hidden="true"></div>
+        ${window.TTTIntro ? window.TTTIntro.poster() : ""}
+        <h1>억울한 사건,<br><em><span>땅</span><span>땅</span><span>땅</span> 판결.</em></h1>
         <p class="hero-copy">친구 사이의 애매한 사건을 접수하고 링크로 친구를 법정에 부르세요. 각자 변론하면 AI 판사가 판결과 형량을 선고합니다.</p>
         <div class="hero-actions">
           <a class="btn btn-primary" href="#create">사건 접수하기 ${ic("right")}</a>
           <a class="btn btn-secondary" href="#join">사건번호로 입장</a>
         </div>
         <div class="hero-note">${ic("shield")} 친구끼리 웃고 끝내는 가상 재판</div>
-        <div class="seal-deco" aria-hidden="true"><img src="assets/logo.png" alt="" /></div>
       </section>
 
       <section class="section">
-        <div class="sec-head"><div><span class="eyebrow">How it works</span><h2>재판은 이렇게 진행됩니다</h2></div></div>
+        <div class="sec-head"><h2>재판은 이렇게 진행됩니다</h2></div>
         <div class="steps">
           <div class="step"><small>접수</small>${ic("file")}<h3>사건 접수</h3><p>사건명을 적고 법정을 열어요.</p></div>
           <div class="step"><small>소환</small>${ic("link")}<h3>링크 공유</h3><p>소환장 링크를 친구에게 보내요.</p></div>
@@ -149,7 +153,7 @@
 
       <section class="section" style="padding-top:28px">
         <form class="case-form" id="create">
-          <div class="form-head"><span class="eyebrow">New case</span><h2>사건을 접수합니다</h2></div>
+          <div class="form-head"><span class="eyebrow">사건 서류</span><h2>사건을 접수합니다</h2></div>
           <div class="fs">
             <label class="fl" for="title">사건명 <span>필수</span></label>
             <input type="text" id="title" maxlength="60" required placeholder="예: 마지막 치킨 한 조각 사건" />
@@ -163,7 +167,7 @@
         </form>
 
         <form class="case-form" id="join">
-          <div class="form-head"><span class="eyebrow">Summoned</span><h2>소환장을 받았나요?</h2></div>
+          <div class="form-head"><span class="eyebrow">소환장</span><h2>소환장을 받았나요?</h2></div>
           <div class="fs">
             <label class="fl" for="code">사건번호 <span>6자리</span></label>
             <input type="text" id="code" class="code-input" maxlength="6" required placeholder="ABC123" value="${esc(prefillCode)}" />
@@ -205,7 +209,7 @@
         <section class="narrow">
           <div class="pending">
             <div class="pending-ic">${ic("scale")}</div>
-            <span class="eyebrow">Court in session</span>
+            <span class="eyebrow">개정 중</span>
             <h2>이미 개정된 법정입니다</h2>
             <p>「${esc(room.title)}」 재판은 입장이 마감됐어요.</p>
             <div class="hero-actions" style="justify-content:center">
@@ -218,7 +222,7 @@
     }
     app.innerHTML = `
       <section class="narrow">
-        <div class="dh"><span class="eyebrow">Summons / ${esc(caseNo(code))}</span><span class="pill">출석 대기</span></div>
+        <div class="dh"><span class="eyebrow">소환장 · ${esc(caseNo(code))}</span><span class="pill">출석 대기</span></div>
         <h1 class="page-title">${esc(room.title)}</h1>
         <p class="sub">친구가 당신을 이 사건의 법정에 소환했어요. 이름을 적고 출석하세요.</p>
         <form class="case-form" id="join">
@@ -355,7 +359,7 @@
   function peopleList(badge, sub = (p) => p.role ?? "자리 고르는 중") {
     return `<ul class="people">${state.players.map((p) => `
       <li>
-        <span class="row-ic">${esc(p.nickname.slice(0, 1))}</span>
+        <span class="row-ic">${esc((p.role ?? "").slice(0, 1))}</span>
         <span class="row-main">
           <strong>${esc(p.nickname)}${p.id === state.sess.player_id ? " (나)" : ""}</strong>
           <span>${esc(sub(p))}${p.is_host ? " · 방장" : ""}</span>
@@ -366,7 +370,7 @@
 
   function caseHead(r, pill, pillClass = "") {
     return `
-      <div class="dh"><span class="eyebrow">Case file / ${esc(caseNo(r.code))}</span><span class="pill ${pillClass}">${pill}</span></div>
+      <div class="dh"><span class="eyebrow">사건 기록 · ${esc(caseNo(r.code))}</span><span class="pill ${pillClass}">${pill}</span></div>
       <h1 class="page-title">${esc(r.title)}</h1>`;
   }
 
@@ -442,7 +446,7 @@
           ${caseHead(r, "변론 중")}
           <div class="pending">
             <div class="pending-ic">${ic("file")}</div>
-            <span class="eyebrow">Brief filed</span>
+            <span class="eyebrow">접수 완료</span>
             <h2>변론서가 접수됐습니다</h2>
             <p>모두 제출하면 판사가 입장합니다. 다른 사람의 변론은 판결문에서 공개돼요.</p>
           </div>
@@ -493,14 +497,16 @@
     app.innerHTML = `
       <section class="narrow">
         ${caseHead(r, retrial ? `제${r.round - 1}차 재심` : "휴정")}
-        <div class="pending">
+        <div class="pending recess">
+          <div class="spot" aria-hidden="true"></div>
+          <div class="scan" aria-hidden="true"></div>
           <div class="pending-ic"><span class="gavel-tap" style="display:inline-flex">${ic("gavel")}</span></div>
-          <span class="eyebrow">Court in recess</span>
-          <h2>${retrial ? "새 판사가 사건을 다시 심리합니다" : "판사가 변론을 검토하고 있습니다"}</h2>
+          <span class="eyebrow">휴정 중</span>
+          <h2>${retrial ? "새 판사가 사건을 다시 심리합니다" : "판결을 기다리는 중"}</h2>
           <p>모든 변론서가 접수됐어요. 곧 판결이 선고됩니다. 보통 10초에서 30초 걸려요.</p>
           ${state.judgeFails >= 3
             ? `<button class="btn btn-primary" id="retry">${ic("redo")} 선고 다시 요청</button>`
-            : `<p style="margin-top:16px"><span class="spin"></span></p>`}
+            : `<p class="cycle" aria-hidden="true"><span>변론을 검토하고 있어요</span><span>쟁점을 정리하고 있어요</span><span>형량을 정하고 있어요</span></p>`}
         </div>
         ${adSlot("recess")}
       </section>`;
@@ -515,7 +521,7 @@
         ${caseHead(r, "선고 대기")}
         <div class="pending">
           <div class="pending-ic">${ic("scale")}</div>
-          <span class="eyebrow">Court closed</span>
+          <span class="eyebrow">업무 마감</span>
           <h2>오늘 법원 업무가 마감됐습니다</h2>
           <p>오늘 선고할 수 있는 사건 수가 모두 찼어요. 변론서는 안전하게 보관돼 있으니 내일 다시 선고를 요청해 주세요.</p>
           <button class="btn btn-primary" id="retry">${ic("redo")} 선고 다시 요청</button>
@@ -534,6 +540,13 @@
     return `<div class="vparties">${cells.map(([role, n]) => `<div><span class="role">${role}</span><strong>${n || "-"}</strong></div>`).join("")}</div>`;
   }
 
+  // 판결 제목 글자 단위 등장용 (연출할 때만 사용)
+  function splitHeadline(text) {
+    let i = 0;
+    return String(text ?? "").split(/(\s+)/).map((w) => /^\s+$/.test(w) ? " " :
+      `<span class="hw">${[...w].map((c) => `<span class="hc" style="--i:${Math.min(i++, 40)}">${esc(c)}</span>`).join("")}</span>`).join("");
+  }
+
   function verdictCard(room, players, stamping = false) {
     const v = room.verdict ?? {};
     const d = new Date(v.decided_at ?? "");
@@ -541,12 +554,12 @@
     return `
       <article class="verdict ${stamping ? "stamping" : ""}" id="verdict-card">
         <div class="vtop">
-          <div><span class="eyebrow">The Friend Court</span><h2>${room.round > 1 ? `제${room.round - 1}차 재심 판결문` : "모의 판결문"}</h2></div>
+          <div><span class="eyebrow">땅땅땅 재판소</span><h2>${room.round > 1 ? `제${room.round - 1}차 재심 판결문` : "모의 판결문"}</h2></div>
           <div class="stamp">판결<br>완료</div>
         </div>
         <div class="vmeta"><span>사건번호 ${esc(caseNo(room.code))}</span><span>${esc(v.judge ?? "AI 판사")}${date ? ` · ${date}` : ""}</span></div>
         ${partiesBlock(players)}
-        <div class="vres"><span>최종 판결</span><h3>${esc(v.headline)}</h3><strong>${esc(v.ruling)}</strong></div>
+        <div class="vres"><span>최종 판결</span><h3>${stamping ? splitHeadline(v.headline) : esc(v.headline)}</h3><strong>${esc(v.ruling)}</strong></div>
         <div class="vblock"><h4>사건 개요</h4><p>${esc(v.summary)}</p></div>
         <div class="vblock"><h4>판단 이유</h4><p>${esc(v.reasoning)}</p></div>
         <div class="sentence"><span class="sl">선고 형량</span><p>${esc(v.sentence)}</p></div>
@@ -568,18 +581,56 @@
   }
 
   // 땅! 땅! 땅! — 이번 세션에서 휴정을 지켜본 사람에게만, 판결마다 한 번
+  // 화면을 탭하면 즉시 최종 화면으로 건너뛴다.
+  let fx = null;
+  function endFx() {
+    if (!fx) return;
+    fx.timers.forEach(clearTimeout);
+    fx.el.remove();
+    document.removeEventListener("pointerdown", endFx);
+    document.getElementById("verdict-card")?.classList.remove("stamping");
+    fx = null;
+  }
+
+  function hitFx(el, stage, n) {
+    const add = (cls, ms, style = "") => {
+      const d = document.createElement("span");
+      d.className = cls;
+      if (style) d.style.cssText = style;
+      (cls === "flash" ? el : stage).appendChild(d);
+      setTimeout(() => d.remove(), ms);
+    };
+    if (n === 3) add("flash", 200); // 번쩍은 마지막 타에만 한 번
+    add(`ring r${n}`, 900);
+    for (let i = 0; i < 6 + n * 3; i++) {
+      const ang = Math.random() * Math.PI * 2, dist = 70 + Math.random() * 90 * n;
+      add("dust", 900, `--dx:${Math.cos(ang) * dist}px;--dy:${Math.sin(ang) * dist * 0.6 - 20}px;--s:${3 + Math.random() * 5}px`);
+    }
+    const shaker = stage.firstChild;
+    stage.style.setProperty("--z", [1.03, 1.045, 1.06][n - 1]); // 무대를 타마다 당김
+    shaker.style.setProperty("--amp", [4, 8, 14][n - 1]);
+    shaker.classList.remove("shake"); void shaker.offsetWidth; shaker.classList.add("shake");
+    if (navigator.vibrate) navigator.vibrate(n * 40);
+  }
+
   function slam() {
     if (reduceMotion()) return false;
+    endFx();
     const el = document.createElement("div");
     el.className = "slam";
     el.setAttribute("aria-hidden", "true");
-    el.innerHTML = `<span class="slam-word w1">땅!</span><span class="slam-word w2">땅!</span><span class="slam-word w3">땅!</span>`;
+    el.innerHTML = `<div class="slam-stage"><div class="slam-shake"><span class="slam-word w1">땅!</span><span class="slam-word w2">땅!</span><span class="slam-word w3">땅!</span></div></div><span class="slam-hint">화면을 탭하면 건너뛰어요</span>`;
     document.body.appendChild(el);
-    [150, 650, 1150].forEach((t) => setTimeout(() => {
-      document.body.classList.remove("shake"); void document.body.offsetWidth; document.body.classList.add("shake");
-      if (navigator.vibrate) navigator.vibrate(60);
-    }, t + 120));
-    setTimeout(() => { el.remove(); document.body.classList.remove("shake"); }, 2500);
+    const stage = el.firstChild;
+    const words = el.querySelectorAll(".slam-word");
+    // 타 간격 360ms, 3타 직전 140ms 정지(hit-stop). 새 글자가 떨어질 때 이전 글자는 흐려진다.
+    const timers = [300, 660, 1020].map((t, i) => setTimeout(() => hitFx(el, stage, i + 1), t));
+    timers.push(setTimeout(() => words[0].classList.add("dim"), 360));
+    timers.push(setTimeout(() => words[1].classList.add("dim"), 800));
+    timers.push(setTimeout(() => { el.remove(); }, 2000));
+    timers.push(setTimeout(endFx, 3800)); // 연출 종료 후 정적 상태로
+    fx = { el, timers };
+    document.addEventListener("pointerdown", endFx);
     return true;
   }
 
@@ -629,7 +680,7 @@
     return `
       <div class="modal-back" role="dialog" aria-modal="true" aria-labelledby="vote-title">
         <div class="modal">
-          <span class="eyebrow">Retrial vote</span>
+          <span class="eyebrow">재심 투표</span>
           <h2 id="vote-title">재심을 열까요?</h2>
           <p class="sub">모두 찬성하면 새 판사가 사건을 다시 판결합니다. 한 명이라도 반대하면 원심이 확정돼요.</p>
           <div class="fl" style="margin-top:18px">찬성 ${agreed}/${state.players.length}</div>
@@ -648,7 +699,7 @@
     const card = document.getElementById("verdict-card");
     if (!card || !window.html2canvas) return toast("이 브라우저에서는 이미지 저장이 안 돼요. 화면을 캡처해 주세요.");
     try {
-      const bg = getComputedStyle(card).backgroundColor || "#fffefa";
+      const bg = getComputedStyle(card).backgroundColor || "#262e34";
       const canvas = await window.html2canvas(card, { backgroundColor: bg, scale: 2 });
       const a = document.createElement("a");
       a.href = canvas.toDataURL("image/png");
@@ -668,7 +719,7 @@
           ${caseHead(room, "심리 중")}
           <div class="pending">
             <div class="pending-ic">${ic("scale")}</div>
-            <span class="eyebrow">Court in session</span>
+            <span class="eyebrow">심리 중</span>
             <h2>아직 선고 전입니다</h2>
             <p>이 재판은 아직 진행 중이에요.</p>
             <a class="btn btn-primary" href="./">우리도 사건 접수하기 ${ic("right")}</a>
