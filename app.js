@@ -357,7 +357,7 @@
   function peopleList(badge, sub = (p) => p.role ?? "자리 고르는 중") {
     return `<ul class="people">${state.players.map((p) => `
       <li>
-        <span class="row-ic">${esc(p.nickname.slice(0, 1))}</span>
+        <span class="row-ic">${esc((p.role ?? "").slice(0, 1))}</span>
         <span class="row-main">
           <strong>${esc(p.nickname)}${p.id === state.sess.player_id ? " (나)" : ""}</strong>
           <span>${esc(sub(p))}${p.is_host ? " · 방장" : ""}</span>
@@ -500,7 +500,7 @@
           <div class="scan" aria-hidden="true"></div>
           <div class="pending-ic"><span class="gavel-tap" style="display:inline-flex">${ic("gavel")}</span></div>
           <span class="eyebrow">휴정 중</span>
-          <h2>${retrial ? "새 판사가 사건을 다시 심리합니다" : "판사가 변론을 검토하고 있습니다"}</h2>
+          <h2>${retrial ? "새 판사가 사건을 다시 심리합니다" : "판결을 기다리는 중"}</h2>
           <p>모든 변론서가 접수됐어요. 곧 판결이 선고됩니다. 보통 10초에서 30초 걸려요.</p>
           ${state.judgeFails >= 3
             ? `<button class="btn btn-primary" id="retry">${ic("redo")} 선고 다시 요청</button>`
@@ -598,14 +598,16 @@
       (cls === "flash" ? el : stage).appendChild(d);
       setTimeout(() => d.remove(), ms);
     };
-    add("flash", 300);
+    if (n === 3) add("flash", 200); // 번쩍은 마지막 타에만 한 번
     add(`ring r${n}`, 900);
     for (let i = 0; i < 6 + n * 3; i++) {
       const ang = Math.random() * Math.PI * 2, dist = 70 + Math.random() * 90 * n;
       add("dust", 900, `--dx:${Math.cos(ang) * dist}px;--dy:${Math.sin(ang) * dist * 0.6 - 20}px;--s:${3 + Math.random() * 5}px`);
     }
-    stage.style.setProperty("--amp", [4, 8, 14][n - 1]);
-    stage.classList.remove("shake"); void stage.offsetWidth; stage.classList.add("shake");
+    const shaker = stage.firstChild;
+    stage.style.setProperty("--z", [1.03, 1.045, 1.06][n - 1]); // 무대를 타마다 당김
+    shaker.style.setProperty("--amp", [4, 8, 14][n - 1]);
+    shaker.classList.remove("shake"); void shaker.offsetWidth; shaker.classList.add("shake");
     if (navigator.vibrate) navigator.vibrate(n * 40);
   }
 
@@ -615,12 +617,16 @@
     const el = document.createElement("div");
     el.className = "slam";
     el.setAttribute("aria-hidden", "true");
-    el.innerHTML = `<div class="slam-stage"><span class="slam-word w1">땅!</span><span class="slam-word w2">땅!</span><span class="slam-word w3">땅!</span></div><span class="slam-hint">화면을 탭하면 건너뛰어요</span>`;
+    el.innerHTML = `<div class="slam-stage"><div class="slam-shake"><span class="slam-word w1">땅!</span><span class="slam-word w2">땅!</span><span class="slam-word w3">땅!</span></div></div><span class="slam-hint">화면을 탭하면 건너뛰어요</span>`;
     document.body.appendChild(el);
     const stage = el.firstChild;
-    const timers = [320, 720, 1120].map((t, i) => setTimeout(() => hitFx(el, stage, i + 1), t));
-    timers.push(setTimeout(() => { el.remove(); }, 2100));
-    timers.push(setTimeout(endFx, 4300)); // 연출 종료 후 정적 상태로
+    const words = el.querySelectorAll(".slam-word");
+    // 타 간격 360ms, 3타 직전 140ms 정지(hit-stop). 새 글자가 떨어질 때 이전 글자는 흐려진다.
+    const timers = [300, 660, 1020].map((t, i) => setTimeout(() => hitFx(el, stage, i + 1), t));
+    timers.push(setTimeout(() => words[0].classList.add("dim"), 360));
+    timers.push(setTimeout(() => words[1].classList.add("dim"), 800));
+    timers.push(setTimeout(() => { el.remove(); }, 2000));
+    timers.push(setTimeout(endFx, 3800)); // 연출 종료 후 정적 상태로
     fx = { el, timers };
     document.addEventListener("pointerdown", endFx);
     return true;
