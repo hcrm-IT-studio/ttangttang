@@ -104,6 +104,12 @@ export function camera(t) {
   return { pos, target, fov, w, shake: shake(t) };
 }
 
+// 홈 히어로 스틸과 같은 카메라(인트로 S5가 이 자리에서 끝나면 히어로 이미지로 이어짐).
+// 여신은 4.4s 이후 -40°를 보고 있어 설계서 좌표 (0.9, 2.9, 3.0)에서는 거의 옆모습이 됨 → 같은 거리·높이에서 -15° 쪽(3/4 정면)
+export const STILL = { pos: [-1.04, 2.95, 3.86], target: [-0.22, 2.6, 0], fov: 32 };
+export const HERO_END = 8.8;   // 카메라가 스틸 자리에 도착
+export const HERO_FADE = 9.1;  // 캔버스가 다 사라짐(아래 홈 히어로가 드러남)
+
 // 망치 흔들림(회전 오프셋만, 위치는 흔들지 않음). 감쇠 180ms.
 const SHAKE = [[6.6, 0.004], [7.0, 0.007], [7.4, 0.012]];
 export function shake(t) {
@@ -157,16 +163,17 @@ export function seal(t) {
 }
 
 // ── DOM 오버레이 ──
-export function overlay(t) {
+export function overlay(t, hero = false) {
   const words = HITS.map((h) => {
     if (t < h) return { on: false, scale: 1.5, alpha: 0 };
     const k = easeOutCubic(prog(t, h, h + 0.09));
-    const out = 1 - prog(t, 8.1, 8.5);
+    const out = hero ? 1 : 1 - prog(t, 8.1, 8.5); // 히어로 모드에서는 main.js가 제목 자리로 옮긴 뒤 지움
     return { on: true, scale: lerp(1.5, 1.0, k), alpha: Math.min(1, 0.35 + k) * out };
   });
   const flash = t >= SEAL_T && t < SEAL_T + 0.06 ? 0.2 : 0; // 단 한 번, 60ms
   // 8.45–8.6 뼈색 종이로 덮임 → 8.6–9.0 건메탈로 → 9.0–9.2 걷힘
+  if (hero) return { words, flash, coverA: 0, toMetal: 0, canvasA: 1 - prog(t, HERO_END, HERO_FADE) };
   const coverA = t < 9.0 ? prog(t, 8.45, 8.6) : 1 - prog(t, 9.0, 9.2);
   const toMetal = prog(t, 8.6, 9.0);
-  return { words, flash, coverA, toMetal };
+  return { words, flash, coverA, toMetal, canvasA: 1 };
 }

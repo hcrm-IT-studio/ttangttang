@@ -131,7 +131,10 @@
     app.innerHTML = `
       <section class="hero ${heroPlay ? "play" : ""}">
         <div class="spot" aria-hidden="true"></div>
-        ${window.TTTIntro ? window.TTTIntro.poster() : ""}
+        <picture class="hero-statue" aria-hidden="true">
+          <source media="(min-width: 601px)" srcset="assets/hero-statue-1440.webp" width="1440" height="900" />
+          <img src="assets/hero-statue-780.webp" width="780" height="960" alt="" fetchpriority="high" decoding="async" />
+        </picture>
         <h1>억울한 사건,<br><em><span>땅</span><span>땅</span><span>땅</span> 판결.</em></h1>
         <p class="hero-copy">친구 사이의 애매한 사건을 접수하고 링크로 친구를 법정에 부르세요. 각자 변론하면 AI 판사가 판결과 형량을 선고합니다.</p>
         <div class="hero-actions">
@@ -154,6 +157,7 @@
       <section class="section" style="padding-top:28px">
         <form class="case-form" id="create">
           <div class="form-head"><span class="eyebrow">사건 서류</span><h2>사건을 접수합니다</h2></div>
+          <div class="sheet">
           <div class="fs">
             <label class="fl" for="title">사건명 <span>필수</span></label>
             <input type="text" id="title" maxlength="60" required placeholder="예: 마지막 치킨 한 조각 사건" />
@@ -163,6 +167,7 @@
             <input type="text" id="nick1" maxlength="12" required placeholder="최대 12자" />
           </div>
           <div class="privacy">${ic("shield")}<p>실명, 전화번호, 학교 정보 같은 개인정보는 쓰지 마세요. 서로 웃고 넘길 수 있는 가벼운 사건만 접수해 주세요.</p></div>
+          </div>
           <button class="btn btn-primary full" type="submit">사건 접수하고 법정 열기 ${ic("right")}</button>
         </form>
 
@@ -461,10 +466,12 @@
         ${caseHead(r, "변론 중")}
         <p class="sub">${esc(m?.role)} 입장에서 판사님을 설득하세요. 다른 사람의 변론은 판결 전까지 보이지 않아요.</p>
         <div class="case-form">
+          <div class="sheet">
           <div class="fs">
             <label class="fl" for="arg">${esc(m?.role)} ${esc(m?.nickname)}의 변론 <span>필수</span></label>
             <textarea id="arg" maxlength="${MAX_ARG}" placeholder="존경하는 재판장님, 저는 억울합니다.">${esc(state.draft)}</textarea>
             <div class="cc"><span id="cnt">${state.draft.length}</span>/${MAX_ARG}</div>
+          </div>
           </div>
           <button class="btn btn-primary full" id="submit">변론서 제출 ${ic("right")}</button>
         </div>
@@ -498,6 +505,7 @@
       <section class="narrow">
         ${caseHead(r, retrial ? `제${r.round - 1}차 재심` : "휴정")}
         <div class="pending recess">
+          <img class="recess-statue" src="assets/hero-statue-780.webp" width="780" height="960" alt="" aria-hidden="true" />
           <div class="spot" aria-hidden="true"></div>
           <div class="scan" aria-hidden="true"></div>
           <div class="pending-ic"><span class="gavel-tap" style="display:inline-flex">${ic("gavel")}</span></div>
