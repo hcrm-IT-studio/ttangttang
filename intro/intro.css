@@ -1,0 +1,34 @@
+/* 땅땅땅 인트로 — 무대(탭한 뒤에만 불러옴) */
+.intro-stage { position: fixed; inset: 0; z-index: 70; background: #0d1114; overflow: hidden; transition: opacity .25s linear; }
+.intro-stage.is-out { background: transparent; }
+.intro-stage.is-leaving { opacity: 0; pointer-events: none; }
+.intro-view, .intro-canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+.intro-words { position: absolute; left: 0; right: 0; top: max(9vh, 56px); display: flex; justify-content: center; gap: .08em; pointer-events: none;
+  font-family: var(--display); font-size: min(28vw, 120px); line-height: 1; color: var(--bone); text-shadow: 0 6px 0 rgba(0, 0, 0, .45), 0 0 30px rgba(0, 0, 0, .55); }
+.intro-words span { display: inline-block; opacity: 0; will-change: transform, opacity; }
+.intro-flash { position: absolute; inset: 0; background: #fff; opacity: 0; pointer-events: none; }
+.intro-cover { position: absolute; inset: 0; opacity: 0; pointer-events: none; background: var(--bone); }
+.intro-ctrl { position: absolute; top: max(12px, env(safe-area-inset-top)); right: max(12px, env(safe-area-inset-right)); display: flex; gap: 8px; z-index: 2; }
+.intro-btn { min-height: 44px; min-width: 44px; padding: 0 14px; font-size: 14px; color: var(--bone); background: rgba(13, 17, 20, .55); border: 1px solid rgba(154, 162, 156, .55); }
+.intro-btn:hover { border-color: var(--brass); }
+.intro-btn:focus-visible { outline: 2px solid var(--brass); outline-offset: 2px; }
+.intro-sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+/* 3단계(2D) */
+.i2d { position: absolute; inset: 0; background: radial-gradient(80% 60% at 50% 100%, #161c20, #0d1114 70%); perspective: 900px; }
+.i2d-spot { position: absolute; left: 50%; top: 0; width: min(120vw, 760px); height: 100%; transform: translateX(-50%); opacity: 0;
+  background: linear-gradient(to bottom, rgba(223, 231, 238, .26), rgba(223, 231, 238, .04) 85%); clip-path: polygon(44% 0, 56% 0, 86% 100%, 14% 100%); }
+.i2d-dust { position: absolute; left: 50%; top: 0; width: min(70vw, 420px); height: 100%; transform: translateX(-50%); opacity: 0;
+  background-image: radial-gradient(1.2px 1.2px at 20% 30%, #dfe7ee 50%, transparent 52%), radial-gradient(1px 1px at 70% 60%, #dfe7ee 50%, transparent 52%), radial-gradient(1.4px 1.4px at 45% 85%, #dfe7ee 50%, transparent 52%);
+  background-size: 120px 140px; clip-path: polygon(40% 0, 60% 0, 80% 100%, 20% 100%); }
+.i2d-goddess { position: absolute; left: 50%; bottom: 14vh; width: min(62vw, 300px); transform: translateX(-50%); transform-origin: 50% 100%; }
+.i2d-goddess svg { display: block; width: 100%; height: auto; }
+.i2d-book { position: absolute; left: 50%; bottom: 10vh; width: min(86vw, 460px); aspect-ratio: 62 / 46; transform: translateX(-50%); transform-origin: 62% 40%; opacity: 0; transform-style: preserve-3d; }
+.i2d-page { position: absolute; top: 0; bottom: 0; width: 50%; background: #e6dfcc; color: #2b2620; padding: 9% 6%; box-shadow: inset 0 0 0 1px rgba(0, 0, 0, .08); font-family: "Noto Serif KR", serif; font-size: clamp(11px, 3.4vw, 17px); line-height: 1.55; }
+.i2d-page b { display: block; font-family: var(--display); font-weight: 400; font-size: 1.5em; margin-bottom: .5em; }
+.i2d-l { left: 0; box-shadow: inset -18px 0 22px -14px rgba(90, 70, 40, .45); }
+.i2d-r { right: 0; box-shadow: inset 18px 0 22px -14px rgba(90, 70, 40, .45); }
+.i2d-seal { position: absolute; right: 12%; bottom: 10%; width: 26%; aspect-ratio: 1; display: grid; place-items: center; text-align: center; font-style: normal; font-family: var(--display); font-size: .78em; line-height: 1.15; color: #e6dfcc; background: #b3302f; opacity: 0; }
+.i2d-cover { position: absolute; top: -1.5%; bottom: -1.5%; left: 50%; width: 51%; background: #23302a; transform-origin: 0 50%; backface-visibility: hidden; display: grid; place-items: center; box-shadow: inset 0 0 0 6px #23302a, inset 0 0 0 8px rgba(193, 154, 75, .55); }
+.i2d-cover em { font-style: normal; font-family: var(--display); font-size: 1.6em; color: rgba(160, 175, 162, .6); }
+.i2d-glow { position: absolute; left: 50%; bottom: 40%; width: 70%; height: 140%; transform: translateX(-50%); opacity: 0; pointer-events: none; background: radial-gradient(50% 50% at 50% 70%, rgba(255, 207, 138, .5), transparent 70%); mix-blend-mode: screen; }

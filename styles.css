@@ -304,6 +304,25 @@ textarea { resize: vertical; min-height: 160px; line-height: 32px; padding-top: 
   49% { transform: translateY(8px); } 52% { transform: translateY(-3px); }
 }
 
+/* 인트로 게이트(연출 본체 스타일은 intro/intro.css를 탭한 뒤 불러옴) */
+.intro-lock, .intro-lock body { overflow: hidden; }
+.intro-pending .hero.play h1, .intro-pending .hero.play h1 em span { animation-play-state: paused; }
+.intro-done .hero.play h1, .intro-done .hero.play h1 em span { animation: none; }
+.ttt-gate { position: fixed; inset: 0; z-index: 60; display: grid; place-items: center; padding: 24px; background: radial-gradient(60% 50% at 50% 0%, rgba(223, 231, 238, .10), transparent 70%), var(--bg); }
+.ttt-gate-in { width: 100%; max-width: 360px; text-align: center; }
+.ttt-gate h2 { font-family: var(--display); font-weight: 400; font-size: clamp(54px, 18vw, 84px); line-height: 1.05; letter-spacing: .04em; }
+.ttt-gate p { margin: 10px 0 0; color: var(--muted); }
+.ttt-gate-acts { display: grid; gap: 10px; margin-top: 30px; }
+.ttt-gate .btn { width: 100%; min-height: 48px; }
+.ttt-gate-link { margin-top: 14px; min-height: 44px; padding: 0 12px; background: none; border: 0; color: var(--bone); text-decoration: underline; text-underline-offset: 4px; }
+.ttt-gate .ttt-gate-note { font-size: 13px; margin-top: 6px; }
+.ttt-gate-load { display: flex; align-items: center; justify-content: center; gap: 10px; }
+.ttt-gate-load[hidden] { display: none; }
+.ttt-spin { width: 16px; height: 16px; border: 2px solid var(--muted); border-top-color: var(--brass); border-radius: 50%; animation: tttSpin .8s linear infinite; }
+@keyframes tttSpin { to { transform: rotate(1turn); } }
+.intro-poster { max-width: 280px; margin: -8px auto 10px; }
+.intro-poster svg { display: block; width: 100%; height: auto; }
+
 /* 재심 투표 */
 .modal-back { position: fixed; inset: 0; z-index: 20; background: rgba(18, 23, 26, .78); display: flex; align-items: flex-end; justify-content: center; }
 .modal { width: 100%; max-width: 720px; max-height: 92dvh; overflow-y: auto; background: var(--panel); border-top: 3px solid var(--khaki); padding: 26px clamp(18px, 4vw, 30px) 30px; }

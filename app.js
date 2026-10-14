@@ -125,11 +125,13 @@
   // ───────── 홈: 사건 접수 ─────────
   let heroPlayed = false; // 홈 히어로의 쾅쾅쾅 등장은 한 번만
   function renderHome(prefillCode = "") {
-    const heroPlay = !heroPlayed && !reduceMotion();
+    // 인트로를 끝까지 본 세션(body.intro-done)에서는 같은 쾅쾅쾅을 다시 하지 않는다
+    const heroPlay = !heroPlayed && !reduceMotion() && !document.body.classList.contains("intro-done");
     heroPlayed = true;
     app.innerHTML = `
       <section class="hero ${heroPlay ? "play" : ""}">
         <div class="spot" aria-hidden="true"></div>
+        ${window.TTTIntro ? window.TTTIntro.poster() : ""}
         <h1>억울한 사건,<br><em><span>땅</span><span>땅</span><span>땅</span> 판결.</em></h1>
         <p class="hero-copy">친구 사이의 애매한 사건을 접수하고 링크로 친구를 법정에 부르세요. 각자 변론하면 AI 판사가 판결과 형량을 선고합니다.</p>
         <div class="hero-actions">
