@@ -60,12 +60,15 @@ function paintOverlay(st, t) {
     st.words.forEach((s) => (s.style.transform = "none"));
     st.from = st.words.map((s) => s.getBoundingClientRect());
     st.to = st.hero.ems.map((e) => e.getBoundingClientRect());
+    st.fontRatio = parseFloat(getComputedStyle(st.hero.ems[0]).fontSize) / parseFloat(getComputedStyle(st.words[0]).fontSize);
   }
+  // 날아오는 글자가 내려앉을 때까지 히어로 제목의 '땅땅땅'은 숨겨 두었다가 같은 자리에서 교대
+  if (st.hero) document.body.classList.toggle("intro-flip", t < HERO_FADE);
   o.words.forEach((w, i) => {
     const s = st.words[i];
     if (flip) { // 300ms 동안 제목 자리로 이동(transform만), 끝에서 사라지면 같은 자리의 제목이 보임
       const k = easeInOutCubic(prog(t, HERO_END, HERO_END + 0.3)), a = st.from[i], b = st.to[i];
-      const sc = 1 + (b.height / a.height - 1) * k;
+      const sc = 1 + (st.fontRatio - 1) * k; // 글자 크기 비율(상자 높이는 행간이 달라 쓰지 않음)
       const dx = (b.left + b.width / 2 - (a.left + a.width / 2)) * k, dy = (b.top + b.height / 2 - (a.top + a.height / 2)) * k;
       s.style.transform = `translate(${dx.toFixed(1)}px, ${dy.toFixed(1)}px) scale(${sc.toFixed(3)})`;
       s.style.opacity = (1 - prog(t, HERO_FADE - 0.05, HERO_FADE + 0.08)).toFixed(3);
@@ -165,8 +168,9 @@ export async function run(opts) {
     });
     closeAudio();
     // DOM을 먼저 걷고(홈 즉시 조작 가능), GPU 자원 해제는 다음 틱에
-    const cleanup = () => { el.remove(); setTimeout(() => { try { world.dispose(); } catch (e) { /* 무시 */ } }, 0); };
+    const cleanup = () => { el.remove(); document.body.classList.remove("intro-flip"); setTimeout(() => { try { world.dispose(); } catch (e) { /* 무시 */ } }, 0); };
     if (kind === "skip") { // 250ms 크로스페이드
+      document.body.classList.remove("intro-flip");
       el.classList.add("is-leaving");
       if (opts.onEnd) opts.onEnd(kind);
       setTimeout(cleanup, 260);
