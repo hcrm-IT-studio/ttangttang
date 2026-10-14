@@ -33,8 +33,10 @@ export function buildCodex(mat, tex, tier) {
   const left = add(pagePlane(0, 1, true), mat.sheetFlat, hinge); // 아래 깔린 면은 줄 종이(제1조는 마지막 장 뒷면)
   left.position.set(0.01 + PW / 2, -0.0004, 0); // 닫힌 상태에선 아래를 보고, 펼치면 위를 봄
   left.renderOrder = 1;
-  const coverMats = [mat.leatherPlain, mat.leatherPlain, mat.leatherTitle, mat.leatherPlain, mat.leatherPlain, mat.leatherPlain];
-  add(new THREE.BoxGeometry(W, COVER, H), coverMats, hinge).position.set(W / 2, BLOCK + COVER / 2, 0);
+  // 앞표지: 재질 배열(면마다 드로우 콜 1개) 대신 가죽 상자 + 제목 면 한 장
+  add(new THREE.BoxGeometry(W, COVER, H), mat.leatherPlain, hinge).position.set(W / 2, BLOCK + COVER / 2, 0);
+  const titleGeo = new THREE.PlaneGeometry(W, H); titleGeo.rotateX(-Math.PI / 2);
+  const title = add(titleGeo, mat.leatherTitle, hinge); title.position.set(W / 2, BLOCK + COVER + 0.0005, 0);
 
   // 책등(반원통). 표지가 열린 각도의 절반만 돌아 페이지 아래로 말려 들어감
   const spinePivot = new THREE.Group(); spinePivot.position.set(0, TOP, 0); spinePivot.userData.anim = true; g.add(spinePivot);
@@ -57,7 +59,7 @@ export function buildCodex(mat, tex, tier) {
   // 걸쇠: 앞표지 끝에서 내려오는 가죽끈 + 황동 버클
   const strapA = add(new THREE.BoxGeometry(0.07, 0.006, 0.06), mat.leatherPlain, hinge);
   strapA.position.set(W + 0.02, BLOCK + COVER - 0.002, 0);
-  const buckle = new THREE.Group(); buckle.position.set(W + 0.055, BLOCK + COVER / 2, 0); buckle.userData.anim = true; hinge.add(buckle);
+  const buckle = new THREE.Group(); buckle.position.set(W + 0.055, BLOCK + COVER / 2, 0); buckle.userData.anim = hi; hinge.add(buckle); // 2단계는 버클을 합쳐 드로우 콜 절약(튀는 동작 생략)
   add(new THREE.BoxGeometry(0.016, 0.03, 0.05), mat.brass, buckle).position.set(0, -0.012, 0);
   const strapB = add(new THREE.BoxGeometry(0.008, TOP + 0.01, 0.056), mat.leatherPlain);
   strapB.position.set(W + 0.054, (TOP + 0.01) / 2 - 0.004, 0);
@@ -82,12 +84,13 @@ export function buildCodex(mat, tex, tier) {
       geo.setAttribute("position", pos); geo.setAttribute("normal", nor);
       geo.setAttribute("uv", new THREE.BufferAttribute(uv, 2)); geo.setIndex(idx);
     }
-    const mf = new THREE.Mesh(front, mat.sheet);
-    const mb = new THREE.Mesh(back, i === n - 1 ? mat.pageLeftBack : mat.sheetBack);
-    mf.receiveShadow = mb.receiveShadow = true;
-    mf.userData.dyn = mb.userData.dyn = true;
-    mf.frustumCulled = mb.frustumCulled = false;
-    g.add(mf, mb);
+    // 마지막 장만 앞(줄 종이)·뒤(제1조)를 따로 그리고, 나머지는 양면 한 장(드로우 콜 절약)
+    const last = i === n - 1;
+    const mf = new THREE.Mesh(front, last ? mat.sheet : mat.sheetBoth);
+    mf.receiveShadow = true; mf.userData.dyn = true; mf.frustumCulled = false;
+    g.add(mf);
+    let mb = null;
+    if (last) { mb = new THREE.Mesh(back, mat.pageLeftBack); mb.receiveShadow = true; mb.userData.dyn = true; mb.frustumCulled = false; g.add(mb); }
     sheets.push({ pos, front, mf, mb, i });
   }
   function bendSheet(sh, p) {
@@ -158,13 +161,13 @@ export function buildCodex(mat, tex, tier) {
     const glowA = (tierNow === 1 ? 0.14 : 0.45) * Math.min(1, L.bookLight / 3.5);
     mat.bookGlow.opacity = glowA; glow.visible = glowA > 0.003;
     const warm = Math.min(1, L.bookLight / 3.5) * c.leak;
-    for (const m of [mat.spread, mat.sheetFlat, mat.pageLeftBack, mat.sheet, mat.sheetBack]) m.emissiveIntensity = 0.15 * warm;
+    for (const m of [mat.spread, mat.sheetFlat, mat.pageLeftBack, mat.sheet, mat.sheetBoth]) m.emissiveIntensity = 0.15 * warm;
     // 인장
     const s = sealT(t);
     sealMesh.visible = s.on;
     sealMesh.scale.set(s.scale, 1, s.scale);
     mat.seal.opacity = s.alpha;
-    mat.seal.emissiveIntensity = L.seal;
+    mat.seal.color.setScalar(0.94 + 0.12 * L.seal); // emissive 0.6 → 1.01배, 0.25 → 0.97배
     // 인장 먼지
     const dt = t - SEAL_T;
     dust.visible = dt >= 0 && dt < 0.8;

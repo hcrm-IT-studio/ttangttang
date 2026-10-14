@@ -128,15 +128,16 @@ export async function createScene3D({ container, tier, model = null }) {
     sheetFlat: paper(T.sheet),
     pageLeftBack: paper(T.spread, { side: THREE.BackSide }),
     sheet: paper(T.sheet, { side: THREE.FrontSide }),
-    sheetBack: paper(T.sheet, { side: THREE.BackSide }),
-    seal: new THREE.MeshStandardMaterial({ map: T.seal, color: 0xffffff, roughness: 0.8, transparent: true, opacity: 0, emissive: 0xb3302f, emissiveIntensity: 0, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2 }),
+    sheetBoth: paper(T.sheet, { side: THREE.DoubleSide }),
+    // 인장: 톤매핑·조명을 받지 않게(ACES가 #b3302f를 분홍빛으로 바래게 함). 'emissive'는 밝기 계수로 흉내
+    seal: new THREE.MeshBasicMaterial({ map: T.seal, color: 0xffffff, transparent: true, opacity: 0, toneMapped: false, fog: false, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2 }),
     sealDust: new THREE.PointsMaterial({ map: T.dot, color: 0xe6dfcc, size: 0.012, transparent: true, depthWrite: false, opacity: 0 }),
     bookShaft: new THREE.ShaderMaterial(shaftShader(0xffcf8a)),
     bookGlow: new THREE.SpriteMaterial({ map: T.warm, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, opacity: 0, fog: false }),
     skyShaft: new THREE.ShaderMaterial(shaftShader(0xdfe7ee)),
     blob: new THREE.MeshBasicMaterial({ map: T.blob, transparent: true, depthWrite: false }),
   };
-  M.marbleDS = M.marble.clone(); M.marbleDS.side = THREE.DoubleSide;
+  if (hi) { M.marbleDS = M.marble.clone(); M.marbleDS.side = THREE.DoubleSide; } else { M.marble.side = THREE.DoubleSide; M.marbleDS = M.marble; } // 2단계: 한 재질로 합쳐 드로우 콜 절약
   M.bookShaft.uniforms.uFall.value = 1.0; M.bookShaft.uniforms.uGain.value = 1.8; // 아래(페이지)가 밝고 위로 사라짐
   M.skyShaft.uniforms.uFall.value = 0.0;  // 위(천창)가 밝음
 
@@ -153,14 +154,14 @@ export async function createScene3D({ container, tier, model = null }) {
   put(new THREE.BoxGeometry(0.09, 0.96, 0.09), M.wood, 0, 0.5, 1.76);
   const board = put(new THREE.BoxGeometry(0.74, 0.03, 0.54), M.wood, 0, 1.03, 1.7);
   board.rotation.x = 15 * DEG;
-  const stage = new THREE.Group(); // 계단·독서대(고정) — 재질별로 합침
-  meshes.splice(1).forEach((o) => { scene.remove(o); stage.add(o); });
-  scene.add(stage); mergeStatic(stage);
   if (!hi) { // 2단계: 원형 그림자 텍스처
     const bg = new THREE.PlaneGeometry(1, 1); bg.rotateX(-Math.PI / 2);
     put(bg, M.blob, 0, 0.452, 0, false).scale.set(1.5, 1, 1.5);
     put(bg, M.blob, 0, 0.002, 1.76, false).scale.set(0.9, 1, 0.7);
   }
+  const stage = new THREE.Group(); // 계단·독서대·그림자(고정) — 재질별로 합침
+  meshes.splice(1).forEach((o) => { scene.remove(o); stage.add(o); });
+  scene.add(stage); mergeStatic(stage);
 
   // ── 여신 ──
   const statue = buildStatue(M, tier);
@@ -353,6 +354,18 @@ export async function createScene3D({ container, tier, model = null }) {
     return { sceneTriangles: Math.round(tris), objects: objs, calls: renderer.info.render.calls, frameTriangles: renderer.info.render.triangles, textures: renderer.info.memory.textures, geometries: renderer.info.memory.geometries, dpr: renderer.getPixelRatio(), tier: degraded ? 2 : tier, model: extModel ? "glb" : "procedural" };
   }
 
+  // QA용: 드로우 콜 분해(본 패스 / +그림자 / +후처리)
+  function drawCalls(t = 4.4) {
+    setAt(t);
+    const sh = renderer.shadowMap.enabled;
+    renderer.shadowMap.enabled = false; renderer.info.reset(); renderer.render(scene, cam);
+    const main = renderer.info.render.calls, tris = renderer.info.render.triangles;
+    renderer.shadowMap.enabled = sh; renderer.shadowMap.needsUpdate = true; renderer.info.reset(); renderer.render(scene, cam);
+    const withShadow = renderer.info.render.calls;
+    renderer.info.reset(); render(t);
+    return { main, mainTriangles: tris, withShadow, full: renderer.info.render.calls };
+  }
+
   function dispose() {
     try {
       disposeTree(scene);
@@ -366,7 +379,7 @@ export async function createScene3D({ container, tier, model = null }) {
     renderer.domElement.remove();
   }
 
-  return { render, resize, dispose, degrade, stats, canvas: renderer.domElement, get degraded() { return degraded; } };
+  return { render, resize, dispose, degrade, stats, drawCalls, canvas: renderer.domElement, get degraded() { return degraded; } };
 }
 
 function disposeTree(root) {

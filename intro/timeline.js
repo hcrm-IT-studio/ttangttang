@@ -153,7 +153,7 @@ export function pageFlip(t, i, n = 7) {
 export function seal(t) {
   if (t < SEAL_T) return { on: false, scale: 1.6, alpha: 0 };
   const k = easeOutCubic(prog(t, SEAL_T, SEAL_T + 0.07));
-  return { on: true, scale: lerp(1.6, 1.0, k), alpha: lerp(0.35, 1, k) }; // 7.4s 첫 프레임부터 보이게
+  return { on: true, scale: lerp(1.6, 1.0, k), alpha: lerp(0.7, 1, k) }; // 7.4s 첫 프레임부터 보이게
 }
 
 // ── DOM 오버레이 ──

@@ -98,7 +98,7 @@ export async function run(opts) {
     const seek = async (t) => { world.render(t); paintOverlay(st, t); await nextFrame(); await nextFrame(); return world.stats(); };
     el.style.visibility = "";
     await seek(opts.debugT);
-    window.__tttIntro = { ready: true, tier, seek, stats: () => world.stats(), wav: wavBase64, MASTER_MAX };
+    window.__tttIntro = { ready: true, tier, seek, stats: () => world.stats(), drawCalls: (t) => world.drawCalls && world.drawCalls(t), wav: wavBase64, MASTER_MAX };
     if (opts.onReady) opts.onReady();
     return;
   }
