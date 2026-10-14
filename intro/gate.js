@@ -2,7 +2,7 @@
 // 단계: 1 풀 3D / 2 저사양 3D / 3 2D / 4 정적(prefers-reduced-motion)
 (() => {
   "use strict";
-  const SHOW_ON_SHARED = false; // 판결 공유 링크(?v=)로 들어온 사람에게도 인트로를 보여 줄지(디자인팀 의견: 안 보여 줌)
+  const SHOW_ON_SHARED = true; // 판결 공유 링크(?v=)로 들어온 사람에게도 인트로를 보여 줄지(대표 결정 2026-10-14: 보여 줌)
   const DEBUG_HOSTS = ["localhost", "127.0.0.1"]; // ?intro=frame|debug&t=초&tier=1|2|3 은 이 주소에서만 동작
   const SEEN = "ttt_intro_seen", SOUND = "ttt_sound";
   const BASE = (document.currentScript && document.currentScript.src) || location.href;
