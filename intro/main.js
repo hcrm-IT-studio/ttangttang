@@ -70,6 +70,7 @@ export async function run(opts) {
     el, view: el.querySelector(".intro-view"), words: [...el.querySelectorAll(".intro-words span")],
     flash: el.querySelector(".intro-flash"), cover: el.querySelector(".intro-cover"), ctrl: el.querySelector(".intro-ctrl"),
   };
+  el.style.visibility = "hidden"; // 준비될 때까지 게이트(로딩 표시)를 가리지 않게
   document.body.appendChild(el);
   const debug = opts.debugT != null;
   if (debug) el.classList.add("is-debug");
@@ -86,6 +87,8 @@ export async function run(opts) {
     }
   }
   if (!world) { tier = 3; world = createScene2D({ container: st.view, goddessSvg: (window.TTTIntro && window.TTTIntro.svg.goddess) || "" }); }
+  // 로딩 중에 사용자가 취소(Esc)했으면 바로 정리
+  if (opts.signal && opts.signal.cancelled) { try { world.dispose(); } catch (e) { /* 무시 */ } el.remove(); return "cancelled"; }
   const scale = tier === 3 ? TIER3_SCALE : 1;
   const onResize = () => world.resize();
   window.addEventListener("resize", onResize);
@@ -93,6 +96,7 @@ export async function run(opts) {
   // ── 디버그: 정해진 시각의 프레임만 그리고 멈춤(소리 없음) ──
   if (debug) {
     const seek = async (t) => { world.render(t); paintOverlay(st, t); await nextFrame(); await nextFrame(); return world.stats(); };
+    el.style.visibility = "";
     await seek(opts.debugT);
     window.__tttIntro = { ready: true, tier, seek, stats: () => world.stats(), wav: wavBase64, MASTER_MAX };
     if (opts.onReady) opts.onReady();
@@ -120,6 +124,7 @@ export async function run(opts) {
     if (ended) return;
     ended = true;
     cancelAnimationFrame(raf);
+    if (opts.hooks) window.__tttIntro.endedAt = performance.now();
     window.removeEventListener("resize", onResize);
     document.removeEventListener("keydown", onKey, true);
     const closeAudio = () => (engine ? engine.fadeOut(300) : Promise.resolve()).then(() => {
@@ -127,7 +132,8 @@ export async function run(opts) {
       try { ctx && ctx.state !== "closed" && ctx.close(); } catch (e) { /* 무시 */ }
     });
     closeAudio();
-    const cleanup = () => { try { world.dispose(); } catch (e) { /* 무시 */ } el.remove(); };
+    // DOM을 먼저 걷고(홈 즉시 조작 가능), GPU 자원 해제는 다음 틱에
+    const cleanup = () => { el.remove(); setTimeout(() => { try { world.dispose(); } catch (e) { /* 무시 */ } }, 0); };
     if (kind === "skip") { // 250ms 크로스페이드
       el.classList.add("is-leaving");
       if (opts.onEnd) opts.onEnd(kind);
@@ -150,6 +156,7 @@ export async function run(opts) {
 
   // 첫 프레임을 그린 뒤 게이트를 걷고 시작
   world.render(0); paintOverlay(st, 0);
+  el.style.visibility = "";
   await nextFrame();
   if (opts.onReady) opts.onReady();
   el.querySelector('[data-a="skip"]').focus({ preventScroll: true });

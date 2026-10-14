@@ -32,9 +32,14 @@ function impulse(ctx, seed) {
     const d = buf.getChannelData(c), r = rng(seed + c * 101);
     for (let i = pre; i < len; i++) {
       const x = (i - pre) / (len - pre);
-      d[i] = (r() * 2 - 1) * Math.pow(1 - x, 2.2) * Math.exp(-x * 3.2) * 0.5;
+      d[i] = (r() * 2 - 1) * Math.pow(1 - x, 2.2) * Math.exp(-x * 3.2);
     }
   }
+  // 에너지 정규화(Σh² = 1): 정규화하지 않으면 잔향이 약 +35dB로 커져 리미터가 계속 눌림
+  let e = 0;
+  for (let c = 0; c < 2; c++) { const d = buf.getChannelData(c); for (let i = 0; i < len; i++) e += d[i] * d[i]; }
+  const k = 1 / Math.sqrt(e / 2);
+  for (let c = 0; c < 2; c++) { const d = buf.getChannelData(c); for (let i = 0; i < len; i++) d[i] *= k; }
   return buf;
 }
 
@@ -116,12 +121,12 @@ export function createEngine(ctx, opts = {}) {
     gavel(strength = 0.55, when = ctx.currentTime) {
       const o = out(0.4);
       const ng = ctx.createGain(); ng.connect(o);
-      ng.gain.setValueAtTime(strength, when);
+      ng.gain.setValueAtTime(strength * 1.6, when);
       ng.gain.exponentialRampToValueAtTime(0.0008, when + 0.09);
       noise(white, when, 0.12, filt("bandpass", 900, 2, ng));
       const tg = ctx.createGain(); tg.connect(o);
       tg.gain.setValueAtTime(0, when);
-      tg.gain.linearRampToValueAtTime(strength * 0.9, when + 0.003);
+      tg.gain.linearRampToValueAtTime(strength * 1.4, when + 0.003);
       tg.gain.exponentialRampToValueAtTime(0.0008, when + 0.15);
       const s = osc("sine", 180, when, when + 0.17, tg);
       s.frequency.setValueAtTime(180, when);
@@ -181,7 +186,7 @@ export function createEngine(ctx, opts = {}) {
       const g = ctx.createGain(); g.connect(out(0.35));
       const trem = ctx.createGain(); trem.connect(g); trem.gain.value = 1;
       lfo(5, 0.03, S(0.8), at(7.8), trem.gain);
-      env(g, S(0.8), 0.12 / 4, 2.5 * timeScale, at(7.4), 0.3 * timeScale, late(0.8));
+      env(g, S(0.8), 0.12 / 5, 2.5 * timeScale, at(7.4), 0.3 * timeScale, late(0.8));
       const lp = filt("lowpass", 1800, 0.7, trem);
       [110, 130.8, 164.8, 246.9].forEach((f) => [-5, 5].forEach((c) => osc("sawtooth", f, S(0.8), at(7.8), lp, cents(c))));
     }
@@ -217,7 +222,7 @@ export function createEngine(ctx, opts = {}) {
     // 브라스 스택 5.0–6.4 (필터 300 → 2,500Hz, 어택 80ms, 릴리즈 0.6s)
     if (fromT < 6.4) {
       const g = ctx.createGain(); g.connect(out(0.35));
-      env(g, S(5.0), 0.14 / 3, 0.08 * timeScale, at(6.4), 0.6 * timeScale, late(5.0));
+      env(g, S(5.0), 0.14 / 5, 0.08 * timeScale, at(6.4), 0.6 * timeScale, late(5.0));
       const lp = filt("lowpass", 300, 0.9, g);
       lp.frequency.setValueAtTime(300, S(5.0));
       lp.frequency.exponentialRampToValueAtTime(2500, Math.max(S(5.0) + 0.05, at(5.8)));

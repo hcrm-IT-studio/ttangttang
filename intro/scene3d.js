@@ -5,7 +5,7 @@ import { RenderPass } from "three/addons/postprocessing/RenderPass.js";
 import { UnrealBloomPass } from "three/addons/postprocessing/UnrealBloomPass.js";
 import { ShaderPass } from "three/addons/postprocessing/ShaderPass.js";
 import { OutputPass } from "three/addons/postprocessing/OutputPass.js";
-import { SMAAPass } from "three/addons/postprocessing/SMAAPass.js";
+import { FXAAPass } from "three/addons/postprocessing/FXAAPass.js"; // SMAA는 룩업 텍스처 때문에 gzip 38.7KB → 예산(260KB) 초과라 FXAA(1.9KB)로 대체
 import { RoomEnvironment } from "three/addons/environments/RoomEnvironment.js";
 import { camera as camAt, looks, statueYaw, beamAngle, rng, DEG } from "./timeline.js";
 import { buildStatue, fitModel } from "./statue.js";
@@ -246,7 +246,7 @@ export async function createScene3D({ container, tier, model = null }) {
   scene.add(dust);
 
   // ── 후처리(1단계) ──
-  let composer = null, bloom = null, grain = null, smaa = null;
+  let composer = null, bloom = null, grain = null, aa = null;
   const setupPost = () => {
     composer = new EffectComposer(renderer);
     composer.addPass(new RenderPass(scene, cam));
@@ -255,8 +255,8 @@ export async function createScene3D({ container, tier, model = null }) {
     composer.addPass(new OutputPass());
     grain = new ShaderPass(GrainVignette);
     composer.addPass(grain);
-    smaa = new SMAAPass();
-    composer.addPass(smaa);
+    aa = new FXAAPass();
+    composer.addPass(aa);
   };
   if (hi) setupPost();
 

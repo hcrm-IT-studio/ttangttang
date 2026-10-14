@@ -11,8 +11,8 @@ min() { "$ESB" "$1" --minify --format=esm --legal-comments=inline --log-level=wa
 min "$SRC/build/three.core.js" "$OUT/three.core.js"
 min "$SRC/build/three.module.js" "$OUT/three.module.js"
 for f in postprocessing/EffectComposer postprocessing/RenderPass postprocessing/UnrealBloomPass \
-         postprocessing/SMAAPass postprocessing/OutputPass postprocessing/ShaderPass postprocessing/Pass \
-         postprocessing/MaskPass shaders/CopyShader shaders/LuminosityHighPassShader shaders/SMAAShader \
+         postprocessing/FXAAPass postprocessing/OutputPass postprocessing/ShaderPass postprocessing/Pass \
+         postprocessing/MaskPass shaders/CopyShader shaders/LuminosityHighPassShader shaders/FXAAShader \
          shaders/OutputShader environments/RoomEnvironment loaders/GLTFLoader \
          utils/BufferGeometryUtils utils/SkeletonUtils; do
   mkdir -p "$OUT/addons/$(dirname $f)"

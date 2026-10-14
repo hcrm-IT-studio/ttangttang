@@ -89,9 +89,10 @@
     const btns = () => [...g.querySelectorAll("button:not([disabled])")];
     btns()[0].focus({ preventScroll: true });
     let busy = false;
+    const signal = { cancelled: false };
     const close = () => { document.removeEventListener("keydown", onKey, true); g.remove(); };
     function onKey(e) {
-      if (e.key === "Escape" && !busy) { e.preventDefault(); bypass(); return; }
+      if (e.key === "Escape") { e.preventDefault(); if (busy) signal.cancelled = true; bypass(); return; }
       if (e.key === "Tab") { // 게이트 안에서만 돈다
         const b = btns(); if (!b.length) return;
         const i = b.indexOf(document.activeElement);
@@ -100,7 +101,8 @@
       }
     }
     document.addEventListener("keydown", onKey, true);
-    function bypass() { set("sessionStorage", SEEN, "skip"); close(); release("skip"); }
+    let released = false;
+    function bypass() { if (released) return; released = true; set("sessionStorage", SEEN, "skip"); close(); release("skip"); }
     async function enter(sound) {
       if (busy) return; busy = true;
       set("sessionStorage", SEEN, "1");
@@ -115,13 +117,13 @@
       try {
         const m = await Promise.race([loadMain(), new Promise((_, no) => setTimeout(() => no(new Error("timeout")), 6000))]);
         await m.run({
-          tier, sound: !!ctx, audioCtx: ctx, hooks: DEBUG_HOSTS.includes(location.hostname),
+          tier, sound: !!ctx, audioCtx: ctx, hooks: DEBUG_HOSTS.includes(location.hostname), signal,
           model: (window.FC_CONFIG && window.FC_CONFIG.INTRO_MODEL) || null,
           onReady: () => { clearTimeout(spin); close(); },
           onEnd: (kind) => { if (kind === "done") set("sessionStorage", SEEN, "done"); release(kind); },
-        });
+        }).then((r) => { if (r === "cancelled") { try { ctx && ctx.close(); } catch (e) { /* 무시 */ } } });
       } catch (e) { // 문구로 알리지 않고 홈으로
-        clearTimeout(spin); close(); release("skip");
+        clearTimeout(spin); close(); if (!released) { released = true; release("skip"); }
         try { ctx && ctx.close(); } catch (e2) { /* 무시 */ }
       }
     }
