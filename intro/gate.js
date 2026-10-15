@@ -18,18 +18,10 @@
     + '<g stroke="#c19a4b" fill="none"><path d="M47 64V50M22 50h48" stroke-width="3"/><path d="M22 50l-10 30M22 50l10 30M70 50l-10 30M70 50l10 30" stroke-width="1.1"/><path d="M118 158h22" stroke-width="4"/><path d="M129 146v12" stroke-width="4"/></g>'
     + '<g fill="#c19a4b"><path d="M9 80q13 10 26 0zM57 80q13 10 26 0z"/></g><path fill="#b9bdc0" d="M126 162h8l-1 88-3 18-3-18z"/>'
     + '<g fill="#2a2f33"><rect x="86" y="62" width="28" height="8" rx="2"/><path d="M112 66q11 6 14 22l-4 1q-4-13-12-19z"/></g></svg>';
-  const POSTER = '<div class="intro-poster" aria-hidden="true"><svg viewBox="0 0 320 230" focusable="false">'
-    + '<defs><linearGradient id="tttS" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#dfe7ee" stop-opacity=".22"/><stop offset="1" stop-color="#dfe7ee" stop-opacity="0"/></linearGradient></defs>'
-    + '<path d="M148 0h24l70 230H78z" fill="url(#tttS)"/>'
-    + '<g transform="translate(107 6) scale(.66)">' + GODDESS.replace(/^<svg[^>]*>/, "").replace(/<\/svg>$/, "").replace(/tttM/g, "tttP") + "</g>"
-    + '<path d="M78 196l82-8v40l-88 6z" fill="#e6dfcc"/><path d="M160 188l82 8 6 38-88-6z" fill="#d9d1bb"/><path d="M72 234l88-6 88 6-2 5-86-4-86 4z" fill="#23302a"/>'
-    + '<g stroke="rgba(43,38,32,.45)" stroke-width="2"><path d="M92 202l50-4M92 210l58-5M92 218l44-3"/><path d="M174 200l40 3M174 208l52 4"/></g>'
-    + '<rect x="206" y="210" width="20" height="20" fill="#b3302f" transform="rotate(-6 216 220)"/></svg></div>';
-
   window.TTTIntro = {
     svg: { goddess: GODDESS },
-    // app.js의 홈 히어로가 부름: 4단계(움직임 줄이기)에서만 정적 포스터
-    poster: () => (reduced() ? POSTER : ""),
+    // 4단계(움직임 줄이기) 정적 포스터는 홈 히어로 스틸 이미지로 대체(중복 제거) — 호환용으로 빈 값
+    poster: () => "",
   };
 
   function webgl2() {
@@ -135,7 +127,7 @@
   }
 
   function debugRun() {
-    const t = Math.max(0, Math.min(9.2, parseFloat(q.get("t")) || 0));
+    const t = q.get("t") === "still" ? "still" : Math.max(0, Math.min(9.2, parseFloat(q.get("t")) || 0)); // still = 홈 히어로 스틸 렌더용
     const tier = Math.min(3, Math.max(1, parseInt(q.get("tier"), 10) || 1));
     document.documentElement.classList.add("intro-lock");
     loadMain().then((m) => m.run({ tier, debugT: t, model: (window.FC_CONFIG && window.FC_CONFIG.INTRO_MODEL) || null }))
@@ -148,10 +140,12 @@
     if (q.get("v") && !SHOW_ON_SHARED) return;
     const cfg = window.FC_CONFIG || {};
     if (!cfg.SUPABASE_URL || cfg.SUPABASE_URL.includes("YOUR-PROJECT")) return;
-    if (reduced()) return; // 4단계: 게이트·연출·소리 없음(포스터는 홈 히어로에 이미 들어감)
+    if (reduced()) { set("sessionStorage", "ttt_intro_tier", "4"); return; } // 4단계: 게이트·연출·소리 없음(포스터는 홈 히어로에 이미 들어감)
     const seen = get("sessionStorage", SEEN);
     if (seen) { if (seen === "done") document.body.classList.add("intro-done"); return; }
-    showGate(detectTier());
+    const tier = detectTier();
+    set("sessionStorage", "ttt_intro_tier", String(tier)); // ambient.js(먼지)가 3·4단계에서 꺼지도록
+    showGate(tier);
   }
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", init);
   else setTimeout(init, 0);

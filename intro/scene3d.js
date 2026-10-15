@@ -7,7 +7,7 @@ import { ShaderPass } from "three/addons/postprocessing/ShaderPass.js";
 import { OutputPass } from "three/addons/postprocessing/OutputPass.js";
 import { FXAAPass } from "three/addons/postprocessing/FXAAPass.js"; // SMAA는 룩업 텍스처 때문에 gzip 38.7KB → 예산(260KB) 초과라 FXAA(1.9KB)로 대체
 import { RoomEnvironment } from "three/addons/environments/RoomEnvironment.js";
-import { camera as camAt, looks, statueYaw, beamAngle, rng, DEG } from "./timeline.js";
+import { camera as camAt, looks, statueYaw, beamAngle, rng, DEG, STILL, HERO_END, prog, easeInOutCubic, lerp } from "./timeline.js";
 import { buildStatue, fitModel } from "./statue.js";
 import { buildCodex } from "./codex.js";
 import { mergeStatic } from "./merge.js";
@@ -146,7 +146,8 @@ export async function createScene3D({ container, tier, model = null }) {
   const put = (geo, m, x, y, z, cast = true, parent = scene) => {
     const o = new THREE.Mesh(geo, m); o.position.set(x, y, z); o.castShadow = cast; o.receiveShadow = true; parent.add(o); meshes.push(o); return o;
   };
-  const floorGeo = new THREE.PlaneGeometry(20, 20); floorGeo.rotateX(-Math.PI / 2);
+  // 넓게: 안개 속으로 끝이 사라지게(20m면 수평선이 보임)
+  const floorGeo = new THREE.PlaneGeometry(80, 80); floorGeo.rotateX(-Math.PI / 2);
   put(floorGeo, M.floor, 0, 0, 0, false);
   [[2.6, 0.075], [2.1, 0.225], [1.6, 0.375]].forEach(([w, y]) => put(new THREE.BoxGeometry(w, 0.15, w), M.pedestal, 0, y, 0));
   // 독서대: 받침 + 기둥 + 15° 기울어진 판
@@ -275,22 +276,54 @@ export async function createScene3D({ container, tier, model = null }) {
   // ── 시간 t의 장면 ──
   const tmpDir = new THREE.Vector3();
   let degraded = false;
-  function setAt(t) {
-    const L = looks(t);
-    // 카메라(세로 화면이면 필요한 폭이 보이도록 시선 방향으로 물러남)
+  // 타임라인 카메라 + 세로 화면 폭 맞춤(필요한 폭이 보이도록 시선 방향으로 물러남)
+  function fitPose(t) {
     const c = camAt(t);
-    cam.fov = c.fov;
     const target = new THREE.Vector3(...c.target);
     const pos = new THREE.Vector3(...c.pos);
     tmpDir.subVectors(pos, target);
     const d = tmpDir.length();
-    const hHalf = Math.atan(Math.tan((c.fov * DEG) / 2) * cam.aspect);
+    const hHalf = Math.atan(Math.tan((c.fov * DEG) / 2) * (W / H));
     const need = c.w / 2 / Math.tan(hHalf);
     if (need > d) pos.copy(target).addScaledVector(tmpDir, need / d);
-    cam.position.copy(pos);
-    cam.lookAt(target);
-    cam.rotateX(c.shake[0]); cam.rotateZ(c.shake[1]);
+    return { pos, target, fov: c.fov, shake: c.shake };
+  }
+  // 히어로 모드(홈 위에서 끝날 때): 7.8–8.8s 법전 → 스틸 카메라. 마지막에는 화면 전체가 아닌
+  // '히어로 이미지 상자'가 스틸과 같은 화각이 되도록 비대칭 투영(setViewOffset)으로 맞춘다.
+  let heroRect = null;
+  function setHeroRect(r) { heroRect = r; }
+  function applyView(pos, target, fov, rect, shake) {
+    cam.position.copy(pos); cam.lookAt(target);
+    if (shake) { cam.rotateX(shake[0]); cam.rotateZ(shake[1]); }
+    cam.fov = fov;
+    if (rect) { cam.aspect = rect.w / rect.h; cam.setViewOffset(rect.w, rect.h, -rect.x, -rect.y, W, H); }
+    else { cam.aspect = W / H; cam.clearViewOffset(); }
     cam.updateProjectionMatrix();
+  }
+  // 히어로 모드·스틸: 배경·안개 색을 홈 벽색(--bg)으로(이미지 테두리가 벽과 이어지게)
+  const BG0 = new THREE.Color(0x0d1114), BG1 = new THREE.Color(0x2c353c); // 톤매핑을 거치면 약 #1c2227(벽색)
+  function setBg(k) { scene.background.copy(BG0).lerp(BG1, k); scene.fog.color.copy(scene.background); }
+  function setCamera(t) {
+    if (t === "still") { setBg(1); return applyView(new THREE.Vector3(...STILL.pos), new THREE.Vector3(...STILL.target), STILL.fov, null); }
+    setBg(heroRect && t > 7.8 ? easeInOutCubic(prog(t, 7.8, HERO_END)) : 0);
+    if (heroRect && t > 7.8) {
+      const a = fitPose(7.8), k = easeInOutCubic(prog(t, 7.8, HERO_END));
+      const pos = a.pos.clone().lerp(new THREE.Vector3(...STILL.pos), k);
+      const target = a.target.clone().lerp(new THREE.Vector3(...STILL.target), k);
+      const R = heroRect;
+      // 가상 상자: 화면 전체(세로 FOV a.fov) → 히어로 이미지 상자(세로 FOV 32). 상자 높이에 맞춰 FOV를 환산해 보간
+      const rect = { x: lerp(0, R.x, k), y: lerp(0, R.y, k), w: lerp(W, R.w, k), h: lerp(H, R.h, k) };
+      const fov = lerp(a.fov, STILL.fov, k);
+      return applyView(pos, target, fov, rect, null);
+    }
+    const p = fitPose(t);
+    applyView(p.pos, p.target, p.fov, null, p.shake);
+  }
+  function setAt(t) {
+    const still = t === "still";
+    if (still) t = 9.2;
+    const L = looks(t);
+    setCamera(still ? "still" : t);
     dustMat.uniforms.uScale.value = (H * renderer.getPixelRatio()) / 2 / Math.tan((cam.fov * DEG) / 2);
     // 여신
     statue.group.rotation.y = statueYaw(t);
@@ -308,9 +341,9 @@ export async function createScene3D({ container, tier, model = null }) {
     if (skyShaft) { M.skyShaft.uniforms.uOpacity.value = L.shaft; M.skyShaft.uniforms.uTime.value = t; }
     M.bookShaft.uniforms.uTime.value = t;
     dustMat.uniforms.uTime.value = t + 30;
-    dustMat.uniforms.uOpacity.value = 0.5 * L.sky;
-    if (bloom) bloom.strength = L.bloom;
-    if (grain) grain.uniforms.uTime.value = t;
+    dustMat.uniforms.uOpacity.value = still ? 0 : 0.5 * L.sky;
+    if (bloom) bloom.strength = still ? 0.35 : L.bloom;
+    if (grain) { grain.uniforms.uTime.value = t; grain.uniforms.uGrain.value = still ? 0 : 0.035; grain.uniforms.uVig.value = still ? 0 : 0.25; } // 스틸은 그레인 없이(압축 효율)
   }
   function render(t) {
     setAt(t);
@@ -379,7 +412,7 @@ export async function createScene3D({ container, tier, model = null }) {
     renderer.domElement.remove();
   }
 
-  return { render, resize, dispose, degrade, stats, drawCalls, canvas: renderer.domElement, get degraded() { return degraded; } };
+  return { render, resize, dispose, degrade, stats, drawCalls, setHeroRect, scene, camera: cam, canvas: renderer.domElement, get degraded() { return degraded; } };
 }
 
 function disposeTree(root) {

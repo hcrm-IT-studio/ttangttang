@@ -1,5 +1,5 @@
 // 땅땅땅 인트로 — 무대(DOM 오버레이)와 재생기. 게이트(gate.js)에서 탭한 뒤 동적으로 불러온다.
-import { LENGTH, overlay } from "./timeline.js";
+import { LENGTH, overlay, HERO_END, HERO_FADE, prog, easeInOutCubic } from "./timeline.js";
 import { createEngine, renderOffline, MASTER_MAX } from "./audio.js";
 import { createScene2D } from "./intro2d.js";
 
@@ -44,20 +44,47 @@ function buildStage() {
 }
 
 const BONE = [230, 223, 204], METAL = [28, 34, 39];
+// 홈 히어로 이미지가 화면에 있으면 '히어로 모드': 3D가 스틸 카메라 자리에서 끝나고 캔버스가 걷히며 같은 그림이 드러난다
+function heroTarget() {
+  const img = document.querySelector("#app .hero-statue img");
+  const ems = [...document.querySelectorAll("#app .hero h1 em span")].slice(0, 3);
+  if (!img || ems.length < 3) return null;
+  const r = img.getBoundingClientRect();
+  if (r.width < 50 || r.height < 50 || r.bottom < 0 || r.top > innerHeight) return null;
+  return { rect: { x: r.left, y: r.top, w: r.width, h: r.height }, ems };
+}
 function paintOverlay(st, t) {
-  const o = overlay(t);
+  const o = overlay(t, !!st.hero);
+  const flip = st.hero && t >= HERO_END;
+  if (flip && !st.from) { // FLIP 시작: 연출 글자 위치(처음)와 히어로 제목 글자 위치(끝)를 잼
+    st.words.forEach((s) => (s.style.transform = "none"));
+    st.from = st.words.map((s) => s.getBoundingClientRect());
+    st.to = st.hero.ems.map((e) => e.getBoundingClientRect());
+    st.fontRatio = parseFloat(getComputedStyle(st.hero.ems[0]).fontSize) / parseFloat(getComputedStyle(st.words[0]).fontSize);
+  }
+  // 날아오는 글자가 내려앉을 때까지 히어로 제목의 '땅땅땅'은 숨겨 두었다가 같은 자리에서 교대
+  if (st.hero) document.body.classList.toggle("intro-flip", t < HERO_FADE);
   o.words.forEach((w, i) => {
     const s = st.words[i];
+    if (flip) { // 300ms 동안 제목 자리로 이동(transform만), 끝에서 사라지면 같은 자리의 제목이 보임
+      const k = easeInOutCubic(prog(t, HERO_END, HERO_END + 0.3)), a = st.from[i], b = st.to[i];
+      const sc = 1 + (st.fontRatio - 1) * k; // 글자 크기 비율(상자 높이는 행간이 달라 쓰지 않음)
+      const dx = (b.left + b.width / 2 - (a.left + a.width / 2)) * k, dy = (b.top + b.height / 2 - (a.top + a.height / 2)) * k;
+      s.style.transform = `translate(${dx.toFixed(1)}px, ${dy.toFixed(1)}px) scale(${sc.toFixed(3)})`;
+      s.style.opacity = (1 - prog(t, HERO_FADE - 0.05, HERO_FADE + 0.08)).toFixed(3);
+      return;
+    }
     s.style.opacity = w.alpha.toFixed(3);
     s.style.transform = `scale(${w.scale.toFixed(3)})`;
   });
+  st.view.style.opacity = o.canvasA.toFixed(3);
   st.flash.style.opacity = o.flash;
   const k = o.toMetal, mix = BONE.map((b, i) => Math.round(b + (METAL[i] - b) * k));
   st.cover.style.backgroundColor = `rgb(${mix.join(",")})`;
   st.cover.style.opacity = o.coverA.toFixed(3);
-  const gone = t >= 9.0;
+  const gone = st.hero ? t >= HERO_FADE : t >= 9.0;
   st.view.style.visibility = gone ? "hidden" : "visible";
-  st.el.classList.toggle("is-out", gone);
+  st.el.classList.toggle("is-out", st.hero ? t >= HERO_END : gone);
   st.ctrl.style.visibility = t >= 8.6 ? "hidden" : "visible";
 }
 
@@ -90,15 +117,23 @@ export async function run(opts) {
   // 로딩 중에 사용자가 취소(Esc)했으면 바로 정리
   if (opts.signal && opts.signal.cancelled) { try { world.dispose(); } catch (e) { /* 무시 */ } el.remove(); return "cancelled"; }
   const scale = tier === 3 ? TIER3_SCALE : 1;
-  const onResize = () => world.resize();
+  const still = opts.debugT === "still";
+  const setHero = () => {
+    st.hero = still ? null : heroTarget(); st.from = null;
+    if (world.setHeroRect) world.setHeroRect(st.hero ? st.hero.rect : null);
+    if (world.setHero) world.setHero(!!st.hero);
+  };
+  setHero();
+  const onResize = () => { world.resize(); setHero(); };
   window.addEventListener("resize", onResize);
 
   // ── 디버그: 정해진 시각의 프레임만 그리고 멈춤(소리 없음) ──
   if (debug) {
-    const seek = async (t) => { world.render(t); paintOverlay(st, t); await nextFrame(); await nextFrame(); return world.stats(); };
+    if (still) el.classList.add("is-still");
+    const seek = async (t) => { world.render(t); if (t !== "still") paintOverlay(st, t); await nextFrame(); await nextFrame(); return world.stats(); };
     el.style.visibility = "";
     await seek(opts.debugT);
-    window.__tttIntro = { ready: true, tier, seek, stats: () => world.stats(), drawCalls: (t) => world.drawCalls && world.drawCalls(t), wav: wavBase64, MASTER_MAX };
+    window.__tttIntro = { ready: true, tier, world, hero: !!st.hero, heroRect: st.hero && st.hero.rect, seek, stats: () => world.stats(), drawCalls: (t) => world.drawCalls && world.drawCalls(t), wav: wavBase64, MASTER_MAX };
     if (opts.onReady) opts.onReady();
     return;
   }
@@ -133,8 +168,9 @@ export async function run(opts) {
     });
     closeAudio();
     // DOM을 먼저 걷고(홈 즉시 조작 가능), GPU 자원 해제는 다음 틱에
-    const cleanup = () => { el.remove(); setTimeout(() => { try { world.dispose(); } catch (e) { /* 무시 */ } }, 0); };
+    const cleanup = () => { el.remove(); document.body.classList.remove("intro-flip"); setTimeout(() => { try { world.dispose(); } catch (e) { /* 무시 */ } }, 0); };
     if (kind === "skip") { // 250ms 크로스페이드
+      document.body.classList.remove("intro-flip");
       el.classList.add("is-leaving");
       if (opts.onEnd) opts.onEnd(kind);
       setTimeout(cleanup, 260);
