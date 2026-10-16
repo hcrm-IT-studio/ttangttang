@@ -10,6 +10,7 @@
   const app = document.getElementById("app");
   const PARTY_ROLES = ["원고", "피고"];
   const EXTRA_ROLES = ["증인", "배심원", "검사", "변호인"];
+  const ROLE_ICON = { 원고: "scale", 피고: "shield", 증인: "eye", 배심원: "users", 검사: "search", 변호인: "file" };
   const MAX_ARG = 200;
   const MAX_ROUND = 4; // 첫 판결 + 재심 3번
   const YEAR = new Date().getFullYear();
@@ -118,13 +119,40 @@
     redo: '<path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/>',
     plus: '<path d="M5 12h14"/><path d="M12 5v14"/>',
     alert: '<circle cx="12" cy="12" r="10"/><path d="M12 8v4"/><path d="M12 16h.01"/>',
+    eye: '<path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/>',
+    search: '<circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/>',
     door: '<path d="M13 4h3a2 2 0 0 1 2 2v14"/><path d="M2 20h3"/><path d="M13 20h9"/><path d="M10 12v.01"/><path d="M13 4.56v16.24a.5.5 0 0 1-.62.49L5 19.5V5.12a1 1 0 0 1 .76-.97l6-1.5A1 1 0 0 1 13 3.62Z"/>',
   };
   const ic = (n) => `<svg class="i" viewBox="0 0 24 24" aria-hidden="true">${ICONS[n]}</svg>`;
 
+  // ───────── 3D 법정 무대 ─────────
+  // 휴정 화면에 3D 법정(판사·법전·판사봉)을 띄우고, 판결이 나오면 같은 무대를 '땅! 땅! 땅!' 연출로 넘긴다.
+  // 3D를 못 돌리는 기기(저사양·데이터 절약·움직임 줄이기)에서는 아래 전부 건너뛰고 기존 화면 그대로다.
+  let courtM = null, courtP = null, court3d = null;
+  function preloadCourt() {
+    if (reduceMotion()) return Promise.resolve();
+    courtP = courtP || import("./stage/court.js").then((m) => { if (m.canRun()) courtM = m; }).catch(() => {});
+    return courtP;
+  }
+  function releaseCourt() {
+    if (court3d) { court3d.dispose(); court3d = null; }
+  }
+  async function mountCourt(persona) {
+    await preloadCourt();
+    const host = document.getElementById("recess-stage");
+    if (!courtM || !host) return;
+    try {
+      if (!court3d || !court3d.alive) court3d = courtM.createCourt({ persona });
+      else court3d.setPersona(persona);
+    } catch { court3d = null; return; }
+    host.appendChild(court3d.el);
+    host.closest(".recess")?.classList.add("has-stage");
+  }
+
   // ───────── 홈: 사건 접수 ─────────
   let heroPlayed = false; // 홈 히어로의 쾅쾅쾅 등장은 한 번만
   function renderHome(prefillCode = "") {
+    releaseCourt();
     // 인트로를 끝까지 본 세션(body.intro-done)에서는 같은 쾅쾅쾅을 다시 하지 않는다
     const heroPlay = !heroPlayed && !reduceMotion() && !document.body.classList.contains("intro-done");
     heroPlayed = true;
@@ -207,6 +235,7 @@
   }
 
   async function renderJoin(code) {
+    releaseCourt();
     const { data: room } = await sb.from("rooms").select("title,status").eq("code", code).maybeSingle();
     if (!room) { toast(ERRORS.room_not_found); return renderHome(); }
     if (room.status !== "lobby") {
@@ -262,6 +291,7 @@
     history.replaceState(null, "", `?room=${code}`);
     await refresh();
     subscribe();
+    setTimeout(preloadCourt, 1500); // 휴정 전에 3D 법정을 미리 받아 둔다
   }
 
   function subscribe() {
@@ -373,14 +403,25 @@
       </li>`).join("")}</ul>`;
   }
 
+  // 재판 진행 단계(출석 → 변론 → 심리 → 판결)
+  const STEPS = ["출석", "변론", "심리", "판결"];
+  const STEP_OF = { lobby: 0, arguing: 1, queued: 2, judging: 2, judging_now: 2, done: 3 };
+  function trialTrack(status) {
+    const at = STEP_OF[status] ?? 0;
+    return `<ol class="track" aria-label="재판 진행 단계">${STEPS.map((name, i) =>
+      `<li class="${i < at ? "past" : i === at ? "now" : ""}"${i === at ? ' aria-current="step"' : ""}><b>0${i + 1}</b>${name}</li>`).join("")}</ol>`;
+  }
+
   function caseHead(r, pill, pillClass = "") {
     return `
       <div class="dh"><span class="eyebrow">사건 기록 · ${esc(caseNo(r.code))}</span><span class="pill ${pillClass}">${pill}</span></div>
-      <h1 class="page-title">${esc(r.title)}</h1>`;
+      <h1 class="page-title">${esc(r.title)}</h1>
+      ${trialTrack(r.status)}`;
   }
 
   // ───────── 대기실 ─────────
   function renderLobby() {
+    releaseCourt();
     const r = state.room, m = me();
     const taken = (role) => state.players.some((p) => p.role === role && p.id !== m?.id);
     const ready =
@@ -404,9 +445,9 @@
             <div class="fl">내 자리 <span>원고·피고는 한 명씩</span></div>
             <div class="choices">
               ${PARTY_ROLES.map((role) => `
-                <button type="button" class="choice ${m?.role === role ? "sel" : ""}" data-role="${role}" ${taken(role) ? "disabled" : ""}>${role}</button>`).join("")}
+                <button type="button" class="choice ${m?.role === role ? "sel" : ""}" data-role="${role}" ${taken(role) ? "disabled" : ""}>${ic(ROLE_ICON[role])}<span>${role}</span></button>`).join("")}
               ${EXTRA_ROLES.map((role) => `
-                <button type="button" class="choice ${m?.role === role ? "sel" : ""}" data-role="${role}" ${extraOpen ? "" : "disabled"}>${role}</button>`).join("")}
+                <button type="button" class="choice ${m?.role === role ? "sel" : ""}" data-role="${role}" ${extraOpen ? "" : "disabled"}>${ic(ROLE_ICON[role])}<span>${role}</span></button>`).join("")}
             </div>
             <p class="cc" style="text-align:left">${extraOpen ? "증인, 배심원, 검사, 변호인은 여러 명이 맡을 수 있어요." : "3명부터 증인, 배심원, 검사, 변호인 자리가 열려요."}</p>
           </div>
@@ -444,6 +485,7 @@
   }
 
   function renderArguing() {
+    releaseCourt();
     const r = state.room, m = me();
     if (m?.submitted) {
       app.innerHTML = `
@@ -505,6 +547,7 @@
       <section class="narrow">
         ${caseHead(r, retrial ? `제${r.round - 1}차 재심` : "휴정")}
         <div class="pending recess">
+          <div class="recess-stage" id="recess-stage"></div>
           <img class="recess-statue" src="assets/hero-statue-780.webp" width="780" height="960" alt="" aria-hidden="true" />
           <div class="spot" aria-hidden="true"></div>
           <div class="scan" aria-hidden="true"></div>
@@ -520,9 +563,11 @@
       </section>`;
     const retry = document.getElementById("retry");
     if (retry) retry.onclick = () => { state.judgeFails = 0; state.lastKey = ""; callJudge(); };
+    mountCourt(r.persona);
   }
 
   function renderQueued() {
+    releaseCourt();
     const r = state.room;
     app.innerHTML = `
       <section class="narrow">
@@ -597,6 +642,7 @@
     fx.el.remove();
     document.removeEventListener("pointerdown", endFx);
     document.getElementById("verdict-card")?.classList.remove("stamping");
+    releaseCourt();
     fx = null;
   }
 
@@ -608,6 +654,7 @@
       (cls === "flash" ? el : stage).appendChild(d);
       setTimeout(() => d.remove(), ms);
     };
+    courtM?.thud(n);
     if (n === 3) add("flash", 200); // 번쩍은 마지막 타에만 한 번
     add(`ring r${n}`, 900);
     for (let i = 0; i < 6 + n * 3; i++) {
@@ -628,6 +675,15 @@
     el.className = "slam";
     el.setAttribute("aria-hidden", "true");
     el.innerHTML = `<div class="slam-stage"><div class="slam-shake"><span class="slam-word w1">땅!</span><span class="slam-word w2">땅!</span><span class="slam-word w3">땅!</span></div></div><span class="slam-hint">화면을 탭하면 건너뛰어요</span>`;
+    // 휴정 화면의 3D 법정을 그대로 넘겨받는다. 없으면 기존 2D 연출만
+    if (court3d && court3d.alive && court3d.el.isConnected) {
+      const host = document.createElement("div");
+      host.className = "slam-3d";
+      host.appendChild(court3d.el);
+      el.appendChild(host);
+      el.classList.add("with-3d");
+      court3d.startStrike();
+    }
     document.body.appendChild(el);
     const stage = el.firstChild;
     const words = el.querySelectorAll(".slam-word");
@@ -635,7 +691,7 @@
     const timers = [300, 660, 1020].map((t, i) => setTimeout(() => hitFx(el, stage, i + 1), t));
     timers.push(setTimeout(() => words[0].classList.add("dim"), 360));
     timers.push(setTimeout(() => words[1].classList.add("dim"), 800));
-    timers.push(setTimeout(() => { el.remove(); }, 2000));
+    timers.push(setTimeout(() => { el.remove(); releaseCourt(); }, 2000));
     timers.push(setTimeout(endFx, 3800)); // 연출 종료 후 정적 상태로
     fx = { el, timers };
     document.addEventListener("pointerdown", endFx);
@@ -648,6 +704,7 @@
     const fresh = state.sawJudging && state.slammedAt !== r.verdict?.decided_at;
     let stamping = false;
     if (fresh) { state.slammedAt = r.verdict?.decided_at; stamping = slam(); }
+    if (!stamping) releaseCourt(); // 연출을 안 하면(이미 본 판결·움직임 줄이기) 3D 무대는 바로 치운다
 
     app.innerHTML = `
       <section class="narrow">
@@ -718,6 +775,7 @@
 
   // ───────── 공유 링크로 들어온 판결 보기 ─────────
   async function renderShared(code) {
+    releaseCourt();
     const { data: room } = await sb.from("rooms")
       .select("id,code,title,status,round,verdict,verdict_history").eq("code", code).maybeSingle();
     if (!room) { toast(ERRORS.room_not_found); return renderHome(); }
