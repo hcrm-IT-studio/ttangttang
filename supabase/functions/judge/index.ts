@@ -166,9 +166,12 @@ async function callChat(name: string, url: string, token: string, model: string,
   return extractJson(out?.choices?.[0]?.message?.content ?? "");
 }
 
-const callGroq = (key: string, system: string, user: string) =>
-  callChat("groq", "https://api.groq.com/openai/v1/chat/completions", key,
-    Deno.env.get("GROQ_MODEL") ?? "openai/gpt-oss-120b", system, user, 4000, { reasoning_effort: "medium" });
+const callGroq = (key: string, system: string, user: string) => {
+  const model = Deno.env.get("GROQ_MODEL") ?? "openai/gpt-oss-120b";
+  const reasoning = model.startsWith("openai/gpt-oss"); // reasoning_effort는 gpt-oss만 지원
+  return callChat("groq", "https://api.groq.com/openai/v1/chat/completions", key, model, system, user,
+    reasoning ? 4000 : 1500, reasoning ? { reasoning_effort: "medium" } : {});
+};
 
 const callHF = (token: string, system: string, user: string) =>
   callChat("hf", "https://router.huggingface.co/v1/chat/completions", token,
