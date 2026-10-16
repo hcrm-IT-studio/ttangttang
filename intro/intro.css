@@ -10,6 +10,8 @@
 .intro-cover { position: absolute; inset: 0; opacity: 0; pointer-events: none; background: var(--bone); }
 .intro-ctrl { position: absolute; top: max(12px, env(safe-area-inset-top)); right: max(12px, env(safe-area-inset-right)); display: flex; gap: 8px; z-index: 2; }
 .intro-btn { min-height: 44px; min-width: 44px; padding: 0 14px; font-size: 14px; color: var(--bone); background: rgba(13, 17, 20, .55); border: 1px solid rgba(154, 162, 156, .55); }
+.intro-skip { position: absolute; left: 50%; bottom: max(28px, calc(env(safe-area-inset-bottom) + 16px)); transform: translateX(-50%); z-index: 2; padding: 0 22px; border-radius: 999px; letter-spacing: .04em; }
+.intro-stage.is-still .intro-skip { display: none; }
 .intro-btn:hover { border-color: var(--brass); }
 .intro-btn:focus-visible { outline: 2px solid var(--brass); outline-offset: 2px; }
 .intro-sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
