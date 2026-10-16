@@ -519,3 +519,30 @@ textarea::placeholder { color: #8a8170; }
   .btn:active, .choice:active { transform: none; }
   #ambient { display: none !important; }
 }
+
+/* ───────── v4 게임 느낌: 진행 단계 · 역할 타일 · 3D 법정 ───────── */
+/* 재판 진행 단계(출석 → 변론 → 심리 → 판결): 지금 단계의 황동 줄이 숨 쉰다 */
+.track { list-style: none; margin: 16px 0 0; padding: 0; display: grid; grid-template-columns: repeat(4, 1fr); border-top: 1px solid var(--rule-leather); border-bottom: 1px solid var(--rule-leather); }
+.track li { position: relative; display: flex; align-items: baseline; justify-content: center; gap: 6px; padding: 11px 0 10px; font-size: 13px; font-weight: 700; color: var(--muted); }
+.track li b { font-family: var(--display); font-weight: 400; font-size: 12px; color: var(--muted); opacity: .8; }
+.track li.past { color: var(--engrave); }
+.track li.now { color: var(--brass-hi); }
+.track li.now b { color: var(--brass); opacity: 1; }
+.track li::after { content: ""; position: absolute; left: 0; right: 0; bottom: -1px; height: 2px; }
+.track li.past::after { background: var(--brass-lo); }
+.track li.now::after { background: var(--brass-grad); box-shadow: 0 0 10px rgba(220, 189, 112, .55); animation: trackGlow 2.4s ease-in-out infinite; }
+@keyframes trackGlow { 50% { box-shadow: 0 0 3px rgba(220, 189, 112, .25); } }
+
+/* 역할 = 아이콘 달린 좌석 명패 */
+.choice { flex-direction: column; gap: 6px; min-height: 72px; }
+.choice .i { font-size: 22px; }
+.choice span { font-size: 14px; line-height: 1.2; }
+
+/* 3D 법정 무대 */
+.stage3d { position: absolute; inset: 0; }
+.stage3d canvas { display: block; width: 100%; height: 100%; }
+.recess-stage { position: relative; flex: 1 1 auto; min-height: 270px; width: calc(100% + 24px); margin: 0 -12px 6px; pointer-events: none; }
+.recess-stage::after { content: ""; position: absolute; inset: 0; pointer-events: none; background: linear-gradient(to bottom, var(--bg), transparent 14%, transparent 70%, var(--bg)); }
+.recess.has-stage .recess-statue, .recess.has-stage .spot { display: none; }
+.slam-3d { position: absolute; inset: 0; z-index: 0; }
+.slam.with-3d { background: #0d1114; }
