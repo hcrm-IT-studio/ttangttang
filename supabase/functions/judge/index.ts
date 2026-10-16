@@ -202,10 +202,9 @@ Deno.serve(async (req) => {
   try { roomId = (await req.json())?.room_id; } catch { /* ignore */ }
   if (!roomId || !/^[0-9a-f-]{36}$/i.test(roomId)) return json({ error: "bad_room" }, 400);
 
-  const geminiKey = Deno.env.get("GEMINI_API_KEY");
+  // 방침에 적힌 업체(Groq)만 쓴다. 다른 AI 업체로 몰래 넘기지 않는다.
   const groqKey = Deno.env.get("GROQ_API_KEY");
-  const hfToken = Deno.env.get("HF_TOKEN");
-  if (!geminiKey && !groqKey && !hfToken) return json({ error: "no_ai_key" }, 500);
+  if (!groqKey) return json({ error: "no_ai_key" }, 500);
 
   const db = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!, {
     auth: { persistSession: false },
@@ -237,11 +236,10 @@ Deno.serve(async (req) => {
 
     const { system, user, personaName } = buildPrompt(room.title, room.persona, room.round, statements);
 
-    // 4. AI 호출 (Groq → Gemini → Hugging Face 순서, 실패하면 다음 제공자)
-    const providers: [string, () => Promise<Record<string, unknown>>][] = [];
-    if (groqKey) providers.push(["groq", () => callGroq(groqKey, system, user)]);
-    if (geminiKey) providers.push(["gemini", () => callGemini(geminiKey, system, user)]);
-    if (hfToken) providers.push(["hf", () => callHF(hfToken, system, user)]);
+    // 4. AI 호출 (Groq만)
+    const providers: [string, () => Promise<Record<string, unknown>>][] = [
+      ["groq", () => callGroq(groqKey, system, user)],
+    ];
 
     let verdict: Record<string, string> | undefined;
     let engine = "";
