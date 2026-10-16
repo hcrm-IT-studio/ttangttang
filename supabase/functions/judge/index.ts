@@ -1,12 +1,15 @@
 // 땅땅땅 — AI 판사 Edge Function
 // 흐름: 판결 권한 잡기 → 하루 상한 확인 → 변론 모으기 → AI 호출 → 판결 저장
 //
-// 비밀 값 (Supabase 대시보드 → Edge Functions → Secrets). 둘 중 하나만 있으면 된다:
-//   GEMINI_API_KEY  Google AI Studio 키 (있으면 우선 사용)
+// 비밀 값 (Supabase 대시보드 → Edge Functions → Secrets). 하나 이상 있으면 된다.
+// 순서대로 시도하고, 앞 것이 실패하면 다음 것으로 넘어간다: Gemini → Groq → Hugging Face
+//   GEMINI_API_KEY  Google AI Studio 키
+//   GROQ_API_KEY    Groq 키
 //   HF_TOKEN        Hugging Face 토큰 (Inference 권한)
 // 선택:
 //   DAILY_LIMIT     하루 최대 판결 수 (기본 1000)
 //   GEMINI_MODEL    기본 gemini-2.5-flash-lite
+//   GROQ_MODEL      기본 openai/gpt-oss-120b
 //   HF_MODEL        기본 openai/gpt-oss-120b:cheapest
 //
 // JWT 검증은 꺼 둔다(로그인 없는 게임). 대신 방 상태가 'judging'일 때만 동작하고
@@ -92,28 +95,36 @@ function extractJson(text: string) {
   return JSON.parse(text.slice(start, end + 1));
 }
 
-async function callHF(token: string, system: string, user: string) {
-  const model = Deno.env.get("HF_MODEL") ?? "openai/gpt-oss-120b:cheapest";
+// OpenAI 호환 API 공통 호출 (Groq, Hugging Face)
+async function callChat(name: string, url: string, token: string, model: string, system: string, user: string, maxTokens: number) {
   const format = Object.entries(FIELDS).map(([k, d]) => `  "${k}": "${d}"`).join(",\n");
   const messages = [
     { role: "system", content: `${system}\n\n[출력 형식]\n다른 말 없이 아래 키를 가진 JSON 객체 하나만 출력한다.\n{\n${format}\n}` },
     { role: "user", content: user },
   ];
   const send = (withFormat: boolean) =>
-    fetch("https://router.huggingface.co/v1/chat/completions", {
+    fetch(url, {
       method: "POST",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
       body: JSON.stringify({
-        model, messages, temperature: 0.9, max_tokens: 2000,
+        model, messages, temperature: 0.9, max_tokens: maxTokens,
         ...(withFormat ? { response_format: { type: "json_object" } } : {}),
       }),
     });
   let res = await send(true);
-  if (res.status === 400 || res.status === 422) res = await send(false); // JSON 모드 미지원 제공자
-  if (!res.ok) throw new Error(`hf_${res.status}: ${await res.text()}`);
+  if (res.status === 400 || res.status === 422) res = await send(false); // JSON 모드 미지원
+  if (!res.ok) throw new Error(`${name}_${res.status}: ${await res.text()}`);
   const out = await res.json();
   return extractJson(out?.choices?.[0]?.message?.content ?? "");
 }
+
+const callGroq = (key: string, system: string, user: string) =>
+  callChat("groq", "https://api.groq.com/openai/v1/chat/completions", key,
+    Deno.env.get("GROQ_MODEL") ?? "openai/gpt-oss-120b", system, user, 2500);
+
+const callHF = (token: string, system: string, user: string) =>
+  callChat("hf", "https://router.huggingface.co/v1/chat/completions", token,
+    Deno.env.get("HF_MODEL") ?? "openai/gpt-oss-120b:cheapest", system, user, 2000);
 
 function clean(v: Record<string, unknown>) {
   const r: Record<string, string> = {};
@@ -136,8 +147,9 @@ Deno.serve(async (req) => {
   if (!roomId || !/^[0-9a-f-]{36}$/i.test(roomId)) return json({ error: "bad_room" }, 400);
 
   const geminiKey = Deno.env.get("GEMINI_API_KEY");
+  const groqKey = Deno.env.get("GROQ_API_KEY");
   const hfToken = Deno.env.get("HF_TOKEN");
-  if (!geminiKey && !hfToken) return json({ error: "no_ai_key" }, 500);
+  if (!geminiKey && !groqKey && !hfToken) return json({ error: "no_ai_key" }, 500);
 
   const db = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!, {
     auth: { persistSession: false },
@@ -169,15 +181,27 @@ Deno.serve(async (req) => {
 
     const { system, user, personaName } = buildPrompt(room.title, room.persona, room.round, statements);
 
-    // 4. AI 호출 (Gemini 우선, 없으면 Hugging Face)
-    const verdict = clean(geminiKey ? await callGemini(geminiKey, system, user) : await callHF(hfToken!, system, user));
+    // 4. AI 호출 (Gemini → Groq → Hugging Face 순서, 실패하면 다음 제공자)
+    const providers: [string, () => Promise<Record<string, unknown>>][] = [];
+    if (geminiKey) providers.push(["gemini", () => callGemini(geminiKey, system, user)]);
+    if (groqKey) providers.push(["groq", () => callGroq(groqKey, system, user)]);
+    if (hfToken) providers.push(["hf", () => callHF(hfToken, system, user)]);
+
+    let verdict: Record<string, string> | undefined;
+    let engine = "";
+    let lastErr: unknown;
+    for (const [name, run] of providers) {
+      try { verdict = clean(await run()); engine = name; break; }
+      catch (e) { lastErr = e; console.error(`provider_failed ${name}`, String(e).slice(0, 300)); }
+    }
+    if (!verdict) throw lastErr ?? new Error("no_provider");
 
     const record = {
       ...verdict,
       judge: personaName,
       persona: room.persona,
       round: room.round,
-      engine: geminiKey ? "gemini" : "hf",
+      engine,
       decided_at: new Date().toISOString(),
     };
 
