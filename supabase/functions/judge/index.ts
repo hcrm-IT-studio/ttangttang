@@ -9,7 +9,7 @@
 // 선택:
 //   DAILY_LIMIT     하루 최대 판결 수 (기본 1000)
 //   GEMINI_MODEL    기본 gemini-2.5-flash-lite
-//   GROQ_MODEL      기본 openai/gpt-oss-120b
+//   GROQ_MODEL      기본 qwen/qwen3.8-27b
 //   HF_MODEL        기본 openai/gpt-oss-120b:cheapest
 //
 // JWT 검증은 꺼 둔다(로그인 없는 게임). 대신 방 상태가 'judging'일 때만 동작하고
@@ -138,6 +138,7 @@ async function callGemini(key: string, system: string, user: string) {
 }
 
 function extractJson(text: string) {
+  text = text.replace(/<think>[\s\S]*?<\/think>/g, ""); // 생각 내용이 섞여 나오는 모델 대비
   const start = text.indexOf("{"), end = text.lastIndexOf("}");
   if (start < 0 || end <= start) throw new Error("no_json");
   return JSON.parse(text.slice(start, end + 1));
@@ -167,10 +168,12 @@ async function callChat(name: string, url: string, token: string, model: string,
 }
 
 const callGroq = (key: string, system: string, user: string) => {
-  const model = Deno.env.get("GROQ_MODEL") ?? "openai/gpt-oss-120b";
-  const reasoning = model.startsWith("openai/gpt-oss"); // reasoning_effort는 gpt-oss만 지원
+  const model = Deno.env.get("GROQ_MODEL") ?? "qwen/qwen3.8-27b";
+  // 모델별 생각(추론) 설정: gpt-oss는 reasoning_effort, qwen은 생각 내용을 숨김
+  const extra = model.startsWith("openai/gpt-oss") ? { reasoning_effort: "medium" }
+    : model.startsWith("qwen/") ? { reasoning_format: "hidden" } : {};
   return callChat("groq", "https://api.groq.com/openai/v1/chat/completions", key, model, system, user,
-    reasoning ? 4000 : 1500, reasoning ? { reasoning_effort: "medium" } : {});
+    model.startsWith("llama") ? 1500 : 4000, extra);
 };
 
 const callHF = (token: string, system: string, user: string) =>
