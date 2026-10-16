@@ -66,17 +66,14 @@
     g.className = "ttt-gate";
     g.setAttribute("role", "dialog"); g.setAttribute("aria-modal", "true");
     g.setAttribute("aria-labelledby", "tttGateT"); g.setAttribute("aria-describedby", "tttGateD");
+    // 선택 화면 없이 바로 재생. 로딩 동안만 이 화면이 보이고, 건너뛰기는 아래에 둔다.
+    // 소리는 브라우저 정책상 탭 없이 켤 수 없어서 꺼진 채 시작 → 연출 화면의 '소리 켜기'로 켠다.
     g.innerHTML = `<div class="ttt-gate-in">
       <h2 id="tttGateT">땅땅땅</h2>
       <p id="tttGateD">${invite ? "친구가 당신을 법정에 불렀어요" : "친구끼리 여는 작은 법정"}</p>
-      <div class="ttt-gate-acts">
-        <button type="button" class="btn btn-primary" data-a="on">소리 켜고 입장</button>
-        <button type="button" class="btn btn-secondary" data-a="off">소리 없이 입장</button>
-      </div>
-      <button type="button" class="ttt-gate-link" data-a="skip">연출 없이 바로 보기</button>
-      <p class="ttt-gate-note">소리가 나요. 볼륨을 확인해 주세요.</p>
-      <p class="ttt-gate-load" role="status" hidden><span class="ttt-spin" aria-hidden="true"></span>법정을 준비하고 있어요</p>
-    </div>`;
+      <p class="ttt-gate-load" role="status"><span class="ttt-spin" aria-hidden="true"></span>법정을 준비하고 있어요</p>
+    </div>
+    <button type="button" class="ttt-gate-link ttt-gate-skip" data-a="skip">건너뛰기 ›</button>`;
     document.body.appendChild(g);
     const btns = () => [...g.querySelectorAll("button:not([disabled])")];
     btns()[0].focus({ preventScroll: true });
@@ -98,14 +95,11 @@
     async function enter(sound) {
       if (busy) return; busy = true;
       set("sessionStorage", SEEN, "1");
-      set("localStorage", SOUND, sound ? "on" : "off");
       let ctx = null;
       if (sound) { // 오디오 정책: 탭 이벤트 안에서 만들고 resume
         try { ctx = new (window.AudioContext || window.webkitAudioContext)(); ctx.resume(); } catch (e) { ctx = null; }
       }
-      g.querySelectorAll("button").forEach((b) => (b.disabled = true));
-      const load = g.querySelector(".ttt-gate-load");
-      const spin = setTimeout(() => (load.hidden = false), 120);
+      const spin = 0;
       try {
         const m = await Promise.race([loadMain(), new Promise((_, no) => setTimeout(() => no(new Error("timeout")), 6000))]);
         await m.run({
@@ -121,9 +115,9 @@
     }
     g.addEventListener("click", (e) => {
       const a = e.target.closest("[data-a]"); if (!a) return;
-      if (a.dataset.a === "skip") bypass(); else enter(a.dataset.a === "on");
+      if (a.dataset.a === "skip") { if (busy) signal.cancelled = true; bypass(); }
     });
-    idle(() => loadMain().then((m) => m.preload(tier)).catch(() => {}));
+    enter(false);
   }
 
   function debugRun() {

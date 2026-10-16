@@ -481,7 +481,8 @@ textarea::placeholder { color: #8a8170; }
 .ttt-gate .btn { width: 100%; min-height: 48px; }
 .ttt-gate-link { margin-top: 14px; min-height: 44px; padding: 0 12px; background: none; border: 0; color: var(--bone); text-decoration: underline; text-underline-offset: 4px; }
 .ttt-gate .ttt-gate-note { font-size: 13px; margin-top: 6px; }
-.ttt-gate-load { display: flex; align-items: center; justify-content: center; gap: 10px; }
+.ttt-gate-skip { position: absolute; left: 50%; bottom: max(28px, calc(env(safe-area-inset-bottom) + 16px)); transform: translateX(-50%); }
+.ttt-gate-load { margin-top: 26px !important; display: flex; align-items: center; justify-content: center; gap: 10px; }
 .ttt-gate-load[hidden] { display: none; }
 .ttt-spin { width: 16px; height: 16px; border: 2px solid var(--muted); border-top-color: var(--brass); border-radius: 50%; animation: tttSpin .8s linear infinite; }
 @keyframes tttSpin { to { transform: rotate(1turn); } }
@@ -546,3 +547,8 @@ textarea::placeholder { color: #8a8170; }
 .recess.has-stage .recess-statue, .recess.has-stage .spot { display: none; }
 .slam-3d { position: absolute; inset: 0; z-index: 0; }
 .slam.with-3d { background: #0d1114; }
+/* 3D 연출일 때 '땅!' 글자는 판사 얼굴을 가리지 않게 화면 아래쪽으로 */
+.slam.with-3d .slam-word { font-size: clamp(48px, 13vw, 72px); }
+.slam.with-3d .slam-word.w1 { transform: translate(-22vw, 16vh) rotate(-8deg); }
+.slam.with-3d .slam-word.w2 { transform: translate(20vw, 22vh) rotate(5deg); }
+.slam.with-3d .slam-word.w3 { transform: translate(0, 31vh); font-size: clamp(76px, 22vw, 120px); }

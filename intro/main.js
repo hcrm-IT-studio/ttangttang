@@ -37,8 +37,8 @@ function buildStage() {
     <div class="intro-cover" aria-hidden="true"></div>
     <div class="intro-ctrl">
       <button type="button" class="intro-btn" data-a="mute" aria-pressed="false">소리 끄기</button>
-      <button type="button" class="intro-btn" data-a="skip">건너뛰기</button>
     </div>
+    <button type="button" class="intro-btn intro-skip" data-a="skip">건너뛰기 ›</button>
     <p class="intro-sr">인트로 연출이 재생되고 있어요. 건너뛰기 버튼이나 Esc 키로 바로 홈으로 갈 수 있어요.</p>`;
   return el;
 }
@@ -85,7 +85,7 @@ function paintOverlay(st, t) {
   const gone = st.hero ? t >= HERO_FADE : t >= 9.0;
   st.view.style.visibility = gone ? "hidden" : "visible";
   st.el.classList.toggle("is-out", st.hero ? t >= HERO_END : gone);
-  st.ctrl.style.visibility = t >= 8.6 ? "hidden" : "visible";
+  st.ctrl.style.visibility = st.skip.style.visibility = t >= 8.6 ? "hidden" : "visible";
 }
 
 // opts: { tier, audioCtx, sound, model, debugT, hooks, onReady(), onEnd(kind) }
@@ -95,7 +95,7 @@ export async function run(opts) {
   const el = buildStage();
   const st = {
     el, view: el.querySelector(".intro-view"), words: [...el.querySelectorAll(".intro-words span")],
-    flash: el.querySelector(".intro-flash"), cover: el.querySelector(".intro-cover"), ctrl: el.querySelector(".intro-ctrl"),
+    flash: el.querySelector(".intro-flash"), cover: el.querySelector(".intro-cover"), ctrl: el.querySelector(".intro-ctrl"), skip: el.querySelector(".intro-skip"),
   };
   el.style.visibility = "hidden"; // 준비될 때까지 게이트(로딩 표시)를 가리지 않게
   document.body.appendChild(el);
@@ -152,7 +152,7 @@ export async function run(opts) {
 
   let ended = false, raf = 0, t0 = 0, tNow = 0;
   const muteBtn = el.querySelector('[data-a="mute"]');
-  const setMuteLabel = (muted) => { muteBtn.textContent = muted ? "소리 켜기" : "소리 끄기"; muteBtn.setAttribute("aria-pressed", String(muted)); };
+  const setMuteLabel = (muted) => { muteBtn.textContent = muted ? "🔇 소리 켜기" : "🔊 소리 끄기"; muteBtn.setAttribute("aria-pressed", String(muted)); };
   setMuteLabel(!opts.sound);
 
   function finish(kind) {

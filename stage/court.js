@@ -119,8 +119,8 @@ export function createCourt({ persona = "sato" } = {}) {
 
   // ── 법정: 바닥·기둥·뒷벽·휘장 ──
   const floor = new THREE.PlaneGeometry(40, 40); floor.rotateX(-Math.PI / 2); geoms.push(floor);
-  const fm = new THREE.Mesh(floor, M.floor); fm.receiveShadow = true; scene.add(fm);
-  box(30, 0.3, 14, M.marble, 0, -0.15, -2);
+  const fm = new THREE.Mesh(floor, M.floor); fm.position.y = -0.32; fm.receiveShadow = true; scene.add(fm); // 대리석 바닥(윗면 y=0)과 겹치면 줄무늬가 깜빡여서 아래로
+  box(40, 0.3, 40, M.marble, 0, -0.15, 0); // 카메라가 멀리 물러나도 대리석 끝이 안 보이게
   box(30, 6, 0.3, M.wall, 0, 3, -3.2);
   [-3.4, -2.2, 2.2, 3.4].forEach((x) => {
     cyl(0.24, 0.24, 5.4, M.marble, x, 2.7, -2.4);
@@ -275,9 +275,14 @@ export function createCourt({ persona = "sato" } = {}) {
     const aspect = w / h;
     // 카메라: 화면이 좁을수록 뒤로 물러나 법대 전체가 보이게. 타격 연출 중에는 판사봉 쪽으로 다가간다
     const striking = ms >= 0;
-    const back = clamp(1.05 / aspect, 1, 1.9);
     const base = striking ? [0.55, 2.2, 5.3] : [0.25, 2.5, 6.3];
-    const tgt = striking ? [0.45, 1.25, 0.5] : [0.1, 1.35, 0.2];
+    const tgt = striking ? [0.45, 1.4, 0.5] : [0.1, 1.35, 0.2];
+    // 세로 화면에서도 판사+판사봉(타격 때 약 4.2, 평소 법대 약 5.6 폭)이 가로로 다 들어오도록 거리를 계산
+    const needW = striking ? 4.2 : 5.6;
+    const d0 = Math.hypot(base[0] - tgt[0], base[1] - tgt[1], base[2] - tgt[2]);
+    const tanH = Math.tan((36 * Math.PI) / 360);
+    const dNeed = Math.max((needW / 2) / (tanH * aspect), 1.75 / tanH); // 가로 폭, 그리고 세로로 판사 모자까지(약 3.5)
+    const back = clamp(dNeed / d0, 1, 4);
     let sx = 0, sy = 0, punch = 0;
     if (striking && !reduced) {
       for (const [i, th] of HITS.entries()) {
@@ -285,7 +290,7 @@ export function createCourt({ persona = "sato" } = {}) {
         if (d >= 0 && d < 380) { const a = [0.05, 0.085, 0.14][i] * Math.exp(-d / 85); sx += Math.sin(d * 0.11 + i) * a; sy += Math.cos(d * 0.13) * a * 0.7; punch = Math.max(punch, [1.2, 2.2, 3.6][i] * Math.exp(-d / 110)); }
       }
     }
-    cam.position.set(base[0] * back * 0.4 + sx, base[1] + sy, base[2] * back);
+    cam.position.set(tgt[0] + (base[0] - tgt[0]) * back + sx, tgt[1] + (base[1] - tgt[1]) * back + sy, tgt[2] + (base[2] - tgt[2]) * back);
     cam.lookAt(tgt[0], tgt[1], tgt[2]);
     cam.fov = 36 - punch;
     cam.updateProjectionMatrix();
