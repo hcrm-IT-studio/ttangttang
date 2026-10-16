@@ -552,3 +552,11 @@ textarea::placeholder { color: #8a8170; }
 .slam.with-3d .slam-word.w1 { transform: translate(-22vw, 16vh) rotate(-8deg); }
 .slam.with-3d .slam-word.w2 { transform: translate(20vw, 22vh) rotate(5deg); }
 .slam.with-3d .slam-word.w3 { transform: translate(0, 31vh); font-size: clamp(76px, 22vw, 120px); }
+
+/* 방침 페이지·안내 문구 */
+.privacy p.aiwarn { margin-top: 8px; }
+.privacy p.aiwarn::before { content: ""; }
+.aiwarn { font-size: 12.5px; line-height: 1.7; }
+.aiwarn a, .footer .dis a { color: inherit; text-decoration: underline; }
+.legal-h { font-size: 17px; margin: 28px 0 8px; }
+.legal-p { font-size: 14.5px; line-height: 1.8; margin: 6px 0; }

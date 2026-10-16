@@ -96,7 +96,7 @@
   // ───────── 상태 ─────────
   const state = {
     sess: null, room: null, players: [],
-    channel: null, poll: null, pollMs: 3000,
+    poll: null, pollMs: 2500,
     judgeTimer: null, lastKey: "", draft: "",
     busy: false, refreshing: false,
     sawJudging: false, slammedAt: null,
@@ -194,7 +194,7 @@
             <label class="fl" for="nick1">내 이름 <span>법정에서 불릴 닉네임</span></label>
             <input type="text" id="nick1" maxlength="12" required placeholder="최대 12자" />
           </div>
-          <div class="privacy">${ic("shield")}<p>실명, 전화번호, 학교 정보 같은 개인정보는 쓰지 마세요. 서로 웃고 넘길 수 있는 가벼운 사건만 접수해 주세요.</p></div>
+          <div class="privacy">${ic("shield")}<p>실명, 전화번호, 학교 정보 같은 개인정보는 쓰지 마세요. 서로 웃고 넘길 수 있는 가벼운 사건만 접수해 주세요.</p><p class="aiwarn">접수하면 입력한 내용이 판결문을 만들려고 미국의 AI 서비스(Groq)로 전달되고, 7일 뒤 자동 삭제됩니다. <a href="?p=privacy">개인정보처리방침</a></p></div>
           </div>
           <button class="btn btn-primary full" type="submit">사건 접수하고 법정 열기 ${ic("right")}</button>
         </form>
@@ -236,7 +236,7 @@
 
   async function renderJoin(code) {
     releaseCourt();
-    const { data: room } = await sb.from("rooms").select("title,status").eq("code", code).maybeSingle();
+    const room = await rpc("get_room_public", { p_code: code }).catch(() => null);
     if (!room) { toast(ERRORS.room_not_found); return renderHome(); }
     if (room.status !== "lobby") {
       app.innerHTML = `
@@ -264,6 +264,7 @@
             <label class="fl" for="nick">내 이름 <span>법정에서 불릴 닉네임</span></label>
             <input type="text" id="nick" maxlength="12" required placeholder="최대 12자" />
           </div>
+          <div class="privacy"><p class="aiwarn">입력한 내용은 판결문을 만들려고 미국의 AI 서비스(Groq)로 전달되고, 7일 뒤 자동 삭제됩니다. 실명·연락처는 쓰지 마세요. <a href="?p=privacy">개인정보처리방침</a></p></div>
           <button class="btn btn-primary full" type="submit">출석하기 ${ic("right")}</button>
         </form>
         ${adSlot("join")}
@@ -294,19 +295,8 @@
     setTimeout(preloadCourt, 1500); // 휴정 전에 3D 법정을 미리 받아 둔다
   }
 
-  function subscribe() {
-    const id = state.sess.room_id;
-    state.channel = sb
-      .channel(`room-${id}`)
-      .on("postgres_changes", { event: "*", schema: "public", table: "rooms", filter: `id=eq.${id}` }, refresh)
-      .on("postgres_changes", { event: "*", schema: "public", table: "players", filter: `room_id=eq.${id}` }, refresh)
-      .subscribe((status) => setPoll(status === "SUBSCRIBED" ? 10000 : 3000));
-    setPoll(3000);
-  }
-
-  function unsubscribe() {
-    if (state.channel) { sb.removeChannel(state.channel); state.channel = null; }
-  }
+  // 방 상태는 토큰으로 확인한 참가자에게만 RPC로 주고, 주기적으로 다시 받아 온다.
+  function subscribe() { setPoll(2500); }
 
   function setPoll(ms) {
     if (state.poll && state.pollMs === ms) return;
@@ -319,22 +309,19 @@
     if (state.refreshing || !state.sess) return;
     state.refreshing = true;
     try {
-      const id = state.sess.room_id;
-      const [{ data: room }, { data: players }] = await Promise.all([
-        sb.from("rooms")
-          .select("id,code,title,status,persona,round,verdict,verdict_history,vote_open,vote_result")
-          .eq("id", id).maybeSingle(),
-        sb.from("players")
-          .select("id,nickname,role,is_host,submitted,vote")
-          .eq("room_id", id).order("created_at"),
-      ]);
-      if (!room) { toast("법정을 찾을 수 없어요."); return renderHome(); }
+      const snap = await sb.rpc("get_room_state", { p_player: state.sess.player_id, p_token: state.sess.token });
+      if (snap.error) {
+        // 방이 지워졌거나 토큰이 맞지 않을 때만 나간다. 일시적인 네트워크 오류는 다음 폴링에서 다시 시도한다.
+        if (/unauthorized/.test(snap.error.message || "")) { toast("법정을 찾을 수 없어요."); return renderHome(); }
+        return;
+      }
+      if (!snap.data) { toast("법정을 찾을 수 없어요."); return renderHome(); }
+      const room = snap.data.room;
       state.room = room;
-      state.players = players ?? [];
+      state.players = snap.data.players ?? [];
       if (room.status === "judging" || room.status === "judging_now") state.sawJudging = true;
 
-      // 판결이 나오면 실시간 연결을 끊고 폴링만 유지 (동시 접속 절약)
-      if (room.status === "done" && state.channel) { unsubscribe(); setPoll(3000); }
+      setPoll(room.status === "done" ? 5000 : 2500); // 판결이 나온 뒤에는 느리게
 
       render();
       maybeJudge();
@@ -776,8 +763,7 @@
   // ───────── 공유 링크로 들어온 판결 보기 ─────────
   async function renderShared(code) {
     releaseCourt();
-    const { data: room } = await sb.from("rooms")
-      .select("id,code,title,status,round,verdict,verdict_history").eq("code", code).maybeSingle();
+    const room = await rpc("get_room_public", { p_code: code }).catch(() => null);
     if (!room) { toast(ERRORS.room_not_found); return renderHome(); }
     if (!room.verdict) {
       app.innerHTML = `
@@ -793,7 +779,7 @@
         </section>`;
       return;
     }
-    const { data: players } = await sb.from("players").select("nickname,role").eq("room_id", room.id).order("created_at");
+    const players = room.players;
     app.innerHTML = `
       <section class="narrow">
         ${caseHead(room, "판결 완료", "done")}
@@ -804,6 +790,42 @@
       </section>`;
   }
 
+  // ───────── 개인정보처리방침 ─────────
+  const CONTACT = "hcrm.it.studio@gmail.com";
+  function renderPrivacy() {
+    releaseCourt();
+    const secs = [
+      ["1. 모으는 정보", [
+        "사건명, 닉네임, 역할(원고·피고 등), 변론 내용, 재심 투표, 방 코드를 받아요. 로그인과 회원가입은 없고, 이름·연락처는 받지 않아요.",
+        "내 기기(브라우저)에는 방에 다시 들어올 때 쓰는 참가자 번호와 비밀 토큰이 저장돼요. 브라우저 사이트 데이터를 지우면 함께 사라져요.",
+        "실명, 전화번호, 학교 같은 개인정보는 쓰지 마세요. 그런 내용이 담긴 판결은 삭제할 수 있어요."]],
+      ["2. 쓰는 목적", ["판결문을 만들고, 같은 방 사람들에게 보여 주고, 재심 투표를 처리하는 데만 써요. 광고나 분석 목적으로 쓰지 않아요."]],
+      ["3. AI에게 전달되는 내용 (국외 이전)", [
+        "판결문을 만들 때 사건명, 닉네임, 역할, 변론 내용이 미국 회사 Groq, Inc.의 AI 서비스로 전달돼요. 이전 국가: 미국.",
+        "Groq는 서비스 제공과 악용 확인을 위해 요청 기록을 일정 기간 보관할 수 있고, 이 부분은 저희가 직접 지울 수 없어요. 보관과 삭제는 Groq의 정책을 따라요.",
+        "이 전달을 원하지 않으면 서비스를 이용하지 말아 주세요."]],
+      ["4. 보관과 삭제", [
+        "방과 변론, 판결문은 마지막 활동 후 7일이 지나면 자동으로 지워요.",
+        `그 전에 지우고 싶으면 방 코드와 함께 ${CONTACT} 로 알려 주세요. 확인되는 대로 삭제해요.`,
+        "방 코드를 아는 사람은 공유 링크로 판결문을 볼 수 있어요. 링크는 믿는 사람에게만 보내세요."]],
+      ["5. 처리를 맡긴 곳", [
+        "데이터 저장과 서버: Supabase (서울 리전)",
+        "판결문 생성: Groq, Inc. (미국)",
+        "웹페이지 제공: GitHub Pages, 글꼴·스크립트: Google Fonts, jsDelivr, cdnjs. 이용자가 접속하면 이 업체들이 접속 기록(IP 등)을 처리할 수 있어요."]],
+      ["6. 만 14세 미만", ["만 14세 미만은 보호자와 함께 이용해 주세요. 닉네임만 쓰고, 이름이나 연락처는 절대 쓰지 마세요."]],
+      ["7. 쿠키와 광고", ["광고·분석용 추적 쿠키는 쓰지 않아요. 지금은 광고가 없어요. 광고를 넣게 되면 이 방침을 먼저 바꿔요."]],
+      ["8. 문의 · 책임자", [`책임자: 땅땅땅 운영자 (hcrm IT studio)`, `문의, 삭제 요청: ${CONTACT}`]],
+    ];
+    app.innerHTML = `
+      <section class="narrow legal">
+        <div class="dh"><span class="eyebrow">방침</span></div>
+        <h1 class="page-title">개인정보처리방침</h1>
+        <p class="sub">땅땅땅은 재미로 하는 가상 재판이에요. 판결에는 법적 효력이 없어요. 시행일 2026-10-16</p>
+        ${secs.map(([h, ps]) => `<h2 class="legal-h">${esc(h)}</h2>${ps.map((t) => `<p class="legal-p">${esc(t)}</p>`).join("")}`).join("")}
+        <div class="vactions"><a class="btn btn-secondary" href="./">처음으로</a></div>
+      </section>`;
+  }
+
   // ───────── 시작 ─────────
   const params = new URLSearchParams(location.search);
   const roomCode = (params.get("room") || "").toUpperCase();
@@ -811,6 +833,8 @@
 
   if (!SUPABASE_URL || SUPABASE_URL.includes("YOUR-PROJECT")) {
     app.innerHTML = `<section class="narrow"><div class="pending"><h2>설정이 필요해요</h2><p>config.js에 Supabase 주소와 키를 넣어 주세요.</p></div></section>`;
+  } else if (params.get("p") === "privacy") {
+    renderPrivacy();
   } else if (viewCode) {
     renderShared(viewCode);
   } else if (roomCode) {
