@@ -2,7 +2,7 @@
 // 흐름: 판결 권한 잡기 → 하루 상한 확인 → 변론 모으기 → AI 호출 → 판결 저장
 //
 // 비밀 값 (Supabase 대시보드 → Edge Functions → Secrets). 하나 이상 있으면 된다.
-// 순서대로 시도하고, 앞 것이 실패하면 다음 것으로 넘어간다: Gemini → Groq → Hugging Face
+// 순서대로 시도하고, 앞 것이 실패하면 다음 것으로 넘어간다: Groq → Gemini → Hugging Face
 //   GEMINI_API_KEY  Google AI Studio 키
 //   GROQ_API_KEY    Groq 키
 //   HF_TOKEN        Hugging Face 토큰 (Inference 권한)
@@ -181,10 +181,10 @@ Deno.serve(async (req) => {
 
     const { system, user, personaName } = buildPrompt(room.title, room.persona, room.round, statements);
 
-    // 4. AI 호출 (Gemini → Groq → Hugging Face 순서, 실패하면 다음 제공자)
+    // 4. AI 호출 (Groq → Gemini → Hugging Face 순서, 실패하면 다음 제공자)
     const providers: [string, () => Promise<Record<string, unknown>>][] = [];
-    if (geminiKey) providers.push(["gemini", () => callGemini(geminiKey, system, user)]);
     if (groqKey) providers.push(["groq", () => callGroq(groqKey, system, user)]);
+    if (geminiKey) providers.push(["gemini", () => callGemini(geminiKey, system, user)]);
     if (hfToken) providers.push(["hf", () => callHF(hfToken, system, user)]);
 
     let verdict: Record<string, string> | undefined;
