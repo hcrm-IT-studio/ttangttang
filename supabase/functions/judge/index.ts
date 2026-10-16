@@ -9,7 +9,7 @@
 // 선택:
 //   DAILY_LIMIT     하루 최대 판결 수 (기본 1000)
 //   GEMINI_MODEL    기본 gemini-2.5-flash-lite
-//   GROQ_MODEL      기본 openai/gpt-oss-120b
+//   GROQ_MODEL      기본 llama-3.3-70b-versatile
 //   HF_MODEL        기본 openai/gpt-oss-120b:cheapest
 //
 // JWT 검증은 꺼 둔다(로그인 없는 게임). 대신 방 상태가 'judging'일 때만 동작하고
@@ -167,7 +167,7 @@ async function callChat(name: string, url: string, token: string, model: string,
 }
 
 const callGroq = (key: string, system: string, user: string) => {
-  const model = Deno.env.get("GROQ_MODEL") ?? "openai/gpt-oss-120b";
+  const model = Deno.env.get("GROQ_MODEL") ?? "llama-3.3-70b-versatile";
   const reasoning = model.startsWith("openai/gpt-oss"); // reasoning_effort는 gpt-oss만 지원
   return callChat("groq", "https://api.groq.com/openai/v1/chat/completions", key, model, system, user,
     reasoning ? 4000 : 1500, reasoning ? { reasoning_effort: "medium" } : {});
